@@ -47,7 +47,7 @@ def max(x, y):
 
 def is_close(x, y):
     ":math:`f(x) = |x - y| < 1e-2` "
-    return math.abs(x -y) < 1e-2
+    return math.abs(x - y) < 1e-2
 
 
 def sigmoid(x):
@@ -104,7 +104,7 @@ def exp(x):
 
 def log_back(x, d):
     r"If :math:`f = log` as above, compute :math:`d \times f'(x)`"
-    return d / (x + EPS) 
+    return d / (x + EPS)
 
 
 def inv(x):
@@ -146,7 +146,7 @@ def map(fn):
     def mapper(ls):
         return [fn(item) for item in ls]
 
-    return mapper 
+    return mapper
 
 
 def negList(ls):
@@ -172,7 +172,7 @@ def zipWith(fn):
     """
     def mapper(ls1, ls2):
         return [fn(ls1[i], ls2[i]) for i in min(len(ls1), len(ls2))]
-    
+
     return mapper
 
 
@@ -198,11 +198,13 @@ def reduce(fn, start):
         fn(x_1, x_0)))`
     """
     def mapper(ls):
-        for item in ls:
-            start = fn(item, start)
+        res = start
 
-        return start
-    
+        for item in ls:
+            res = fn(item, res)
+
+        return res
+
     return mapper
 
 
