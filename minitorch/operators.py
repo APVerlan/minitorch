@@ -47,7 +47,7 @@ def max(x, y):
 
 def is_close(x, y):
     ":math:`f(x) = |x - y| < 1e-2` "
-    return math.abs(x - y) < 1e-2
+    return abs(x - y) < 1e-2
 
 
 def sigmoid(x):
