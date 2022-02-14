@@ -5,6 +5,8 @@ Collection of the core mathematical operators used throughout the code base.
 
 import math
 
+EPS = 1e-6
+
 # ## Task 0.1
 
 # Implementation of a prelude of elementary functions.
@@ -42,7 +44,7 @@ def eq(x, y):
 
 def max(x, y):
     ":math:`f(x) =` x if x is greater than y else y"
-    return x > y
+    return x if x > y else y
 
 
 def is_close(x, y):
@@ -68,10 +70,7 @@ def sigmoid(x):
     Returns:
         float : sigmoid value
     """
-    if x >= 0:
-        return 1. / (1 + math.exp(-x))
-    else:
-        return math.exp(x) / (1 + math.exp(x))
+    return 1. / (1. + math.exp(-x) + EPS)
 
 
 def relu(x):
@@ -87,9 +86,6 @@ def relu(x):
         float : relu value
     """
     return max(0, x)
-
-
-EPS = 1e-6
 
 
 def log(x):
@@ -171,7 +167,7 @@ def zipWith(fn):
 
     """
     def mapper(ls1, ls2):
-        return [fn(ls1[i], ls2[i]) for i in min(len(ls1), len(ls2))]
+        return [fn(ls1[i], ls2[i]) for i in range(min(len(ls1), len(ls2)))]
 
     return mapper
 
@@ -215,4 +211,4 @@ def sum(ls):
 
 def prod(ls):
     "Product of a list using :func:`reduce` and :func:`mul`."
-    reduce(mul, 1)(ls)
+    return reduce(mul, 1)(ls)
