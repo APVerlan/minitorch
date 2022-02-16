@@ -44,6 +44,7 @@ class ModuleA4(minitorch.Module):
 def test_stacked_demo():
     "Check that each of the properties match"
     mod = ModuleA1()
+    print(mod.named_parameters())
     np = dict(mod.named_parameters())
 
     x = str(mod)

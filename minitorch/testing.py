@@ -5,7 +5,7 @@ class MathTest:
     @staticmethod
     def neg(a):
         "Negate the argument"
-        return -a
+        return -1. * a
 
     @staticmethod
     def addConstant(a):

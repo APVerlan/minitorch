@@ -29,17 +29,17 @@ def add(x, y):
 
 def neg(x):
     ":math:`f(x) = -x`"
-    return -x
+    return -1. * x
 
 
 def lt(x, y):
     ":math:`f(x) =` 1.0 if x is less than y else 0.0"
-    return x < y
+    return float(x < y)
 
 
 def eq(x, y):
     ":math:`f(x) =` 1.0 if x is equal to y else 0.0"
-    return x == y
+    return float(x == y)
 
 
 def max(x, y):
@@ -85,7 +85,7 @@ def relu(x):
     Returns:
         float : relu value
     """
-    return max(0, x)
+    return max(0., x)
 
 
 def log(x):
