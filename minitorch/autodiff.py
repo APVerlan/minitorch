@@ -350,9 +350,10 @@ def backpropagate(variable, deriv):
 
     for var in top_sort[1:]:
         var_d_output = d_outputs[var.name]
-        var._derivative = var_d_output
         if not var.is_leaf():
             for child_var, d_output in var.history.backprop_step(var_d_output):
                 d_outputs[child_var.name] += d_output
+        else:
+            var.accumulate_derivative(var_d_output)
 
         del d_outputs[var.name]
