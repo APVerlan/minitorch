@@ -1,3 +1,8 @@
+from ast import operator
+from collections import deque
+from concurrent.futures import process
+
+
 variable_count = 1
 
 
@@ -190,8 +195,7 @@ class History:
         Returns:
             list of numbers : a derivative with respect to `inputs`
         """
-        # TODO: Implement for Task 1.4.
-        raise NotImplementedError("Need to implement for Task 1.4")
+        return self.last_fn.chain_rule(self.ctx, self.inputs, d_output)
 
 
 class FunctionBase:
@@ -273,8 +277,19 @@ class FunctionBase:
         """
         # Tip: Note when implementing this function that
         # cls.backward may return either a value or a tuple.
-        # TODO: Implement for Task 1.3.
-        raise NotImplementedError("Need to implement for Task 1.3")
+        if isinstance(inputs, list):
+            inputs = tuple(inputs)
+        inputs = inputs if isinstance(inputs, tuple) else (inputs, )
+
+        backward = cls.backward(ctx, d_output)
+        backward = backward if isinstance(backward, tuple) else (backward, )
+
+        constants = [is_constant(arg) for arg in inputs]
+        derivatives = []
+        for i, is_const in enumerate(constants):
+            if not is_const:
+                derivatives.append((inputs[i], backward[i]))
+        return derivatives
 
 
 # Algorithms for backpropagation
@@ -282,6 +297,16 @@ class FunctionBase:
 
 def is_constant(val):
     return not isinstance(val, Variable) or val.history is None
+
+
+def dfs(variable, top_order, visited):
+    visited.add(variable.name)
+    if not variable.is_leaf():                     # in leaf vertex no child ( wow!:) )
+        for child_var in variable.history.inputs:
+            if isinstance(child_var, Variable):      # we dont interest in constants in backprop
+                if child_var.name not in visited:
+                    dfs(child_var, top_order, visited)
+    top_order.appendleft(variable)
 
 
 def topological_sort(variable):
@@ -295,8 +320,9 @@ def topological_sort(variable):
         list of Variables : Non-constant Variables in topological order
                             starting from the right.
     """
-    # TODO: Implement for Task 1.4.
-    raise NotImplementedError("Need to implement for Task 1.4")
+    top_order, visited = deque(), set()
+    dfs(variable, top_order, visited)
+    return top_order
 
 
 def backpropagate(variable, deriv):
@@ -312,5 +338,21 @@ def backpropagate(variable, deriv):
 
     No return. Should write to its results to the derivative values of each leaf through `accumulate_derivative`.
     """
-    # TODO: Implement for Task 1.4.
-    raise NotImplementedError("Need to implement for Task 1.4")
+    variable._derivative = deriv
+    d_outputs = dict()
+
+    top_sort = list(topological_sort(variable))
+    for var in top_sort[1:]:
+        d_outputs[var.name] = 0.
+
+    for var, d_output in variable.history.backprop_step(deriv):
+        d_outputs[var.name] += d_output
+
+    for var in top_sort[1:]:
+        var_d_output = d_outputs[var.name]
+        var._derivative = var_d_output
+        if not var.is_leaf():
+            for child_var, d_output in var.history.backprop_step(var_d_output):
+                d_outputs[child_var.name] += d_output
+
+        del d_outputs[var.name]

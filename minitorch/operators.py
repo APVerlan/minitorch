@@ -105,17 +105,17 @@ def log_back(x, d):
 
 def inv(x):
     ":math:`f(x) = 1/x`"
-    return 1. / (EPS + x)
+    return 1. / x
 
 
 def inv_back(x, d):
     r"If :math:`f(x) = 1/x` compute :math:`d \times f'(x)`"
-    return - d / (x ** 2 + EPS)
+    return - d / x ** 2
 
 
 def relu_back(x, d):
     r"If :math:`f = relu` compute :math:`d \times f'(x)`"
-    return d * (x > 0)
+    return 1. * d * (x > 0)
 
 
 # ## Task 0.3
