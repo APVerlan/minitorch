@@ -170,10 +170,7 @@ class TensorData:
         lshape = array(self.shape)
         out_index = array(self.shape)
         for i in range(self.size):
-            print("ordinal: ", i)
-            print("shape: ", lshape)
             to_index(i, lshape, out_index)
-            print("out_index: ", tuple(out_index))
             yield tuple(out_index)
 
     def sample(self):
@@ -198,7 +195,7 @@ class TensorData:
         Returns:
             :class:`TensorData`: a new TensorData with the same storage and a new dimension order.
         """
-        
+
         assert list(sorted(order)) == list(
             range(len(self.shape))
         ), f"Must give a position to each dimension. Shape: {self.shape} Order: {order}"
