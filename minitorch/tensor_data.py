@@ -1,3 +1,5 @@
+from ast import operator
+from math import perm
 import random
 from .operators import prod
 from numpy import array, float64, ndarray
@@ -24,8 +26,7 @@ def index_to_position(index, strides):
         int : position in storage
     """
 
-    # TODO: Implement for Task 2.1.
-    raise NotImplementedError("Need to implement for Task 2.1")
+    return sum([idx * stride for idx, stride in zip(index, strides)])
 
 
 def to_index(ordinal, shape, out_index):
@@ -44,8 +45,15 @@ def to_index(ordinal, shape, out_index):
       None : Fills in `out_index`.
 
     """
-    # TODO: Implement for Task 2.1.
-    raise NotImplementedError("Need to implement for Task 2.1")
+    shape_prod = 1
+    for s in shape[1:]:
+        shape_prod *= s
+
+    for i in range(len(shape[1:])):
+        out_index[i] = (ordinal / shape_prod)
+        ordinal %= shape_prod
+        shape_prod /= shape[i + 1]
+    out_index[len(shape) - 1] = ordinal
 
 
 def broadcast_index(big_index, big_shape, shape, out_index):
@@ -162,7 +170,10 @@ class TensorData:
         lshape = array(self.shape)
         out_index = array(self.shape)
         for i in range(self.size):
+            print("ordinal: ", i)
+            print("shape: ", lshape)
             to_index(i, lshape, out_index)
+            print("out_index: ", tuple(out_index))
             yield tuple(out_index)
 
     def sample(self):
@@ -187,12 +198,16 @@ class TensorData:
         Returns:
             :class:`TensorData`: a new TensorData with the same storage and a new dimension order.
         """
+        
         assert list(sorted(order)) == list(
             range(len(self.shape))
         ), f"Must give a position to each dimension. Shape: {self.shape} Order: {order}"
+        new_shape, new_strides = [], []
+        for i in order:
+            new_shape.append(self.shape[i])
+            new_strides.append(self.strides[i])
 
-        # TODO: Implement for Task 2.1.
-        raise NotImplementedError("Need to implement for Task 2.1")
+        return TensorData(self._storage, tuple(new_shape), tuple(new_strides))
 
     def to_string(self):
         s = ""
@@ -204,6 +219,7 @@ class TensorData:
                 else:
                     break
             s += l
+            print("index: ", index)
             v = self.get(index)
             s += f"{v:3.2f}"
             l = ""
