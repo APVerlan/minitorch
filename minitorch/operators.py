@@ -45,7 +45,7 @@ def max(x: float, y: float) -> float:
 
 
 def is_close(x: float, y: float) -> bool:
-    ":math:`f(x) = |x - y| < 1e-2` "
+    ":math:`f(x) = |x - y| < 1e-2`"
     return abs(x - y) < 1e-2
 
 

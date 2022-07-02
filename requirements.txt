@@ -1,4 +1,5 @@
 numpy
+wheel
 numba
 pytest
 pytest-env
