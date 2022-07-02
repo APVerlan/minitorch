@@ -1,6 +1,5 @@
-from ast import operator
 from collections import deque
-from concurrent.futures import process
+from typing import Iterable, Optional, Union, Any
 
 
 variable_count = 1
@@ -10,6 +9,17 @@ variable_count = 1
 
 # Variable is the main class for autodifferentiation logic for scalars
 # and tensors.
+
+class Variable:
+    ...
+
+
+class FunctionBase:
+    ...
+
+
+class History:
+    ...
 
 
 class Variable:
@@ -21,7 +31,7 @@ class Variable:
         name (string) : a globally unique name of the variable
     """
 
-    def __init__(self, history, name=None):
+    def __init__(self, history: Optional[History] = None, name: Optional[str] = None):
         global variable_count
         assert history is None or isinstance(history, History), history
 
@@ -39,7 +49,7 @@ class Variable:
             self.name = self.unique_id
         self.used = 0
 
-    def requires_grad_(self, val):
+    def requires_grad_(self, val: bool):
         """
         Set the requires_grad flag to `val` on variable.
 
@@ -51,7 +61,7 @@ class Variable:
         """
         self.history = History()
 
-    def backward(self, d_output=None):
+    def backward(self, d_output: Optional[float] = None) -> None:
         """
         Calls autodiff to fill in the derivatives for the history of this object.
 
@@ -64,14 +74,14 @@ class Variable:
         backpropagate(self, d_output)
 
     @property
-    def derivative(self):
+    def derivative(self) -> Optional[float]:
         return self._derivative
 
     def is_leaf(self):
         "True if this variable created by the user (no `last_fn`)"
         return self.history.last_fn is None
 
-    def accumulate_derivative(self, val):
+    def accumulate_derivative(self, val: float) -> None:
         """
         Add `val` to the the derivative accumulated on this variable.
         Should only be called during autodifferentiation on leaf variables.
@@ -84,13 +94,13 @@ class Variable:
             self._derivative = self.zeros()
         self._derivative += val
 
-    def zero_derivative_(self):  # pragma: no cover
+    def zero_derivative_(self) -> None:  # pragma: no cover
         """
         Reset the derivative on this variable.
         """
         self._derivative = self.zeros()
 
-    def zero_grad_(self):  # pragma: no cover
+    def zero_grad_(self) -> None:  # pragma: no cover
         """
         Reset the derivative on this variable.
         """
@@ -108,21 +118,21 @@ class Variable:
     def __rmul__(self, b):
         return self * b
 
-    def zeros(self):
+    def zeros(self) -> float:
         return 0.0
 
 
 # Some helper functions for handling optional tuples.
 
 
-def wrap_tuple(x):
+def wrap_tuple(x: Any) -> tuple[Any]:
     "Turn a possible value into a tuple"
     if isinstance(x, tuple):
         return x
     return (x,)
 
 
-def unwrap_tuple(x):
+def unwrap_tuple(x: tuple[Any]) -> Union[tuple[Any], Any]:
     "Turn a singleton tuple into a value"
     if len(x) == 1:
         return x[0]
@@ -142,11 +152,11 @@ class Context:
         saved_tensors (tuple) : alias for saved_values
     """
 
-    def __init__(self, no_grad=False):
+    def __init__(self, no_grad=False) -> None:
         self._saved_values = None
-        self.no_grad = no_grad
+        self.no_grad: bool = no_grad
 
-    def save_for_backward(self, *values):
+    def save_for_backward(self, *values: Any) -> None:
         """
         Store the given `values` if they need to be used during backpropagation.
 
@@ -158,13 +168,13 @@ class Context:
         self._saved_values = values
 
     @property
-    def saved_values(self):
+    def saved_values(self) -> Any:
         assert not self.no_grad, "Doesn't require grad"
         assert self._saved_values is not None, "Did you forget to save values?"
         return unwrap_tuple(self._saved_values)
 
     @property
-    def saved_tensors(self):  # pragma: no cover
+    def saved_tensors(self) -> Any:  # pragma: no cover
         return self.saved_values
 
 
@@ -180,12 +190,12 @@ class History:
 
     """
 
-    def __init__(self, last_fn=None, ctx=None, inputs=None):
+    def __init__(self, last_fn: Optional[FunctionBase] = None, ctx: Optional[Context] = None, inputs: Optional[Iterable[Any]] = None):
         self.last_fn = last_fn
         self.ctx = ctx
         self.inputs = inputs
 
-    def backprop_step(self, d_output):
+    def backprop_step(self, d_output: Any):
         """
         Run one step of backpropagation by calling chain rule.
 
@@ -213,7 +223,7 @@ class FunctionBase:
         raise NotImplementedError()
 
     @classmethod
-    def apply(cls, *vals):
+    def apply(cls, *vals: Any):
         """
         Apply is called by the user to run the Function.
         Internally it does three things:
@@ -255,13 +265,12 @@ class FunctionBase:
         )
 
         # Create a new variable from the result with a new history.
-        back = None
         if need_grad:
-            back = History(cls, ctx, vals)
-        return cls.variable(cls.data(c), back)
+            return cls.variable(cls.data(c), History(cls, ctx, vals))
+        return cls.variable(cls.data(c), None)
 
     @classmethod
-    def chain_rule(cls, ctx, inputs, d_output):
+    def chain_rule(cls, ctx: Context, inputs: Iterable[Any], d_output: Any) -> Iterable[tuple[Variable, Any]]:
         """
         Implement the derivative chain-rule.
 
@@ -277,9 +286,7 @@ class FunctionBase:
         """
         # Tip: Note when implementing this function that
         # cls.backward may return either a value or a tuple.
-        if isinstance(inputs, list):
-            inputs = tuple(inputs)
-        inputs = inputs if isinstance(inputs, tuple) else (inputs, )
+        inputs = tuple(inputs) if isinstance(inputs, Iterable) else (inputs, )
 
         backward = cls.backward(ctx, d_output)
         backward = backward if isinstance(backward, tuple) else (backward, )
@@ -295,12 +302,13 @@ class FunctionBase:
 # Algorithms for backpropagation
 
 
-def is_constant(val):
+def is_constant(val: Any) -> bool:
     return not isinstance(val, Variable) or val.history is None
 
 
-def dfs(variable, top_order, visited):
+def dfs(variable: Variable, top_order: deque[Variable], visited: set[str]) -> None:
     visited.add(variable.name)
+
     if not variable.is_leaf():                     # in leaf vertex no child ( wow!:) )
         for child_var in variable.history.inputs:
             if isinstance(child_var, Variable):      # we dont interest in constants in backprop
@@ -309,7 +317,7 @@ def dfs(variable, top_order, visited):
     top_order.appendleft(variable)
 
 
-def topological_sort(variable):
+def topological_sort(variable: Variable) -> Iterable[Variable]:
     """
     Computes the topological order of the computation graph.
 
@@ -320,12 +328,13 @@ def topological_sort(variable):
         list of Variables : Non-constant Variables in topological order
                             starting from the right.
     """
-    top_order, visited = deque(), set()
+    top_order: deque[Variable] = deque()
+    visited: set[str] = set()
     dfs(variable, top_order, visited)
-    return top_order
+    return list(top_order)
 
 
-def backpropagate(variable, deriv):
+def backpropagate(variable: Variable, deriv: Any) -> None:
     """
     Runs backpropagation on the computation graph in order to
     compute derivatives for the leave nodes.
@@ -341,9 +350,9 @@ def backpropagate(variable, deriv):
     variable._derivative = deriv
     d_outputs = dict()
 
-    top_sort = list(topological_sort(variable))
+    top_sort = topological_sort(variable)
     for var in top_sort[1:]:
-        d_outputs[var.name] = 0.
+        d_outputs[var.name] = variable.zeros()
 
     for var, d_output in variable.history.backprop_step(deriv):
         d_outputs[var.name] += d_output

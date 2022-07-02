@@ -1,3 +1,43 @@
+from typing import Dict, Any, Optional
+
+
+class Module:
+    ...
+
+
+class Parameter:
+    """
+    A Parameter is a special container stored in a :class:`Module`.
+
+    It is designed to hold a :class:`Variable`, but we allow it to hold
+    any value for testing.
+    """
+
+    def __init__(self, value: Any = None, name: Optional[str] = None) -> None:
+        self.value: Any = value
+        self.name: Optional[str] = name
+
+        if hasattr(value, "requires_grad_"):
+            self.value.requires_grad_(True)
+            if self.name:
+                self.value.name = self.name
+
+    def update(self, value: Any):
+        "Update the parameter value."
+        self.value: Any = value
+
+        if hasattr(value, "requires_grad_"):
+            self.value.requires_grad_(True)
+            if self.name:
+                self.value.name = self.name
+
+    def __repr__(self) -> str:
+        return repr(self.value)
+
+    def __str__(self) -> str:
+        return str(self.value)
+
+
 class Module:
     """
     Modules form a tree that store parameters and other
@@ -10,28 +50,28 @@ class Module:
 
     """
 
-    def __init__(self):
-        self._modules = {}
-        self._parameters = {}
-        self.training = True
+    def __init__(self) -> None:
+        self._modules: Dict[str, Module] = {}
+        self._parameters: Dict[str, Module] = {}
+        self.training: bool = True
 
-    def modules(self):
+    def modules(self) -> list[Module]:
         "Return the direct child modules of this module."
         return self.__dict__["_modules"].values()
 
-    def train(self):
+    def train(self) -> None:
         "Set the mode of this module and all descendent modules to `train`."
         self.training = True
         for mod in self.modules():
             mod.train()
 
-    def eval(self):
+    def eval(self) -> None:
         "Set the mode of this module and all descendent modules to `eval`."
         self.training = False
         for mod in self.modules():
             mod.eval()
 
-    def named_parameters(self):
+    def named_parameters(self) -> list[tuple[str, Parameter]]:
         """
         Collect all the parameters of this module and its descendents.
 
@@ -45,7 +85,7 @@ class Module:
             res += [(mod_name + '.' + item[0], item[1]) for item in mod.named_parameters()]
         return res
 
-    def parameters(self):
+    def parameters(self) -> list[Parameter]:
         "Enumerate over all the parameters of this module and its descendents."
         res = list(self.__dict__["_parameters"].values())
 
@@ -53,43 +93,43 @@ class Module:
             res += module.parameters()
         return res
 
-    def add_parameter(self, k, v):
+    def add_parameter(self, name: str, value: Any) -> Parameter:
         """
         Manually add a parameter. Useful helper for scalar parameters.
 
         Args:
-            k (str): Local name of the parameter.
-            v (value): Value for the parameter.
+            name (str): Local name of the parameter.
+            value (Any): Value for the parameter.
 
         Returns:
             Parameter: Newly created parameter.
         """
-        val = Parameter(v, k)
-        self.__dict__["_parameters"][k] = val
-        return val
+        param = Parameter(value, name)
+        self.__dict__["_parameters"][name] = param
+        return param
 
-    def __setattr__(self, key, val):
+    def __setattr__(self, name: str, val: Any) -> None:
         if isinstance(val, Parameter):
-            self.__dict__["_parameters"][key] = val
+            self.__dict__["_parameters"][name] = val
         elif isinstance(val, Module):
-            self.__dict__["_modules"][key] = val
+            self.__dict__["_modules"][name] = val
         else:
-            super().__setattr__(key, val)
+            super().__setattr__(name, val)
 
-    def __getattr__(self, key):
-        if key in self.__dict__["_parameters"]:
-            return self.__dict__["_parameters"][key]
+    def __getattr__(self, name: str) -> Any:
+        if name in self.__dict__["_parameters"]:
+            return self.__dict__["_parameters"][name]
 
-        if key in self.__dict__["_modules"]:
-            return self.__dict__["_modules"][key]
+        if name in self.__dict__["_modules"]:
+            return self.__dict__["_modules"][name]
 
     def __call__(self, *args, **kwargs):
         return self.forward(*args, **kwargs)
 
     def forward(self):
-        assert False, "Not Implemented"
+        raise NotImplementedError("")
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         def _addindent(s_, numSpaces):
             s = s_.split("\n")
             if len(s) == 1:
@@ -115,34 +155,3 @@ class Module:
 
         main_str += ")"
         return main_str
-
-
-class Parameter:
-    """
-    A Parameter is a special container stored in a :class:`Module`.
-
-    It is designed to hold a :class:`Variable`, but we allow it to hold
-    any value for testing.
-    """
-
-    def __init__(self, x=None, name=None):
-        self.value = x
-        self.name = name
-        if hasattr(x, "requires_grad_"):
-            self.value.requires_grad_(True)
-            if self.name:
-                self.value.name = self.name
-
-    def update(self, x):
-        "Update the parameter value."
-        self.value = x
-        if hasattr(x, "requires_grad_"):
-            self.value.requires_grad_(True)
-            if self.name:
-                self.value.name = self.name
-
-    def __repr__(self):
-        return repr(self.value)
-
-    def __str__(self):
-        return str(self.value)

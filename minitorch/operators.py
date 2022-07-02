@@ -2,57 +2,54 @@
 Collection of the core mathematical operators used throughout the code base.
 """
 
-
 import math
+
+from typing import Callable, Sequence
 
 EPS = 1e-6
 
-# ## Task 0.1
 
-# Implementation of a prelude of elementary functions.
-
-
-def mul(x, y):
+def mul(x: float, y: float) -> float:
     ":math:`f(x, y) = x * y`"
     return x * y
 
 
-def id(x):
+def id(x: float) -> float:
     ":math:`f(x) = x`"
     return x
 
 
-def add(x, y):
+def add(x: float, y: float) -> float:
     ":math:`f(x, y) = x + y`"
     return x + y
 
 
-def neg(x):
+def neg(x: float) -> float:
     ":math:`f(x) = -x`"
     return -1. * x
 
 
-def lt(x, y):
+def lt(x: float, y: float) -> float:
     ":math:`f(x) =` 1.0 if x is less than y else 0.0"
     return float(x < y)
 
 
-def eq(x, y):
+def eq(x: float, y: float) -> float:
     ":math:`f(x) =` 1.0 if x is equal to y else 0.0"
     return float(x == y)
 
 
-def max(x, y):
+def max(x: float, y: float) -> float:
     ":math:`f(x) =` x if x is greater than y else y"
     return x if x > y else y
 
 
-def is_close(x, y):
+def is_close(x: float, y: float) -> bool:
     ":math:`f(x) = |x - y| < 1e-2` "
     return abs(x - y) < 1e-2
 
 
-def sigmoid(x):
+def sigmoid(x: float) -> float:
     r"""
     :math:`f(x) =  \frac{1.0}{(1.0 + e^{-x})}`
 
@@ -73,7 +70,7 @@ def sigmoid(x):
     return 1. / (1. + math.exp(-x) + EPS)
 
 
-def relu(x):
+def relu(x: float) -> float:
     """
     :math:`f(x) =` x if x is greater than 0, else 0
 
@@ -88,42 +85,40 @@ def relu(x):
     return max(0., x)
 
 
-def log(x):
+def log(x: float) -> float:
     ":math:`f(x) = log(x)`"
     return math.log(x + EPS)
 
 
-def exp(x):
+def exp(x: float) -> float:
     ":math:`f(x) = e^{x}`"
     return math.exp(x)
 
 
-def log_back(x, d):
+def log_back(x: float, d: float) -> float:
     r"If :math:`f = log` as above, compute :math:`d \times f'(x)`"
     return d / (x + EPS)
 
 
-def inv(x):
+def inv(x: float) -> float:
     ":math:`f(x) = 1/x`"
     return 1. / x
 
 
-def inv_back(x, d):
+def inv_back(x: float, d: float) -> float:
     r"If :math:`f(x) = 1/x` compute :math:`d \times f'(x)`"
     return - d / x ** 2
 
 
-def relu_back(x, d):
+def relu_back(x: float, d: float) -> float:
     r"If :math:`f = relu` compute :math:`d \times f'(x)`"
     return 1. * d * (x > 0)
 
 
-# ## Task 0.3
-
 # Small library of elementary higher-order functions for practice.
 
 
-def map(fn):
+def map(fn: Callable[[float], float]) -> Callable[[Sequence[float]], Sequence[float]]:
     """
     Higher-order map.
 
@@ -139,18 +134,18 @@ def map(fn):
         function : A function that takes a list, applies `fn` to each element, and returns a
         new list
     """
-    def mapper(ls):
+    def mapper(ls: Sequence[float]) -> Sequence[float]:
         return [fn(item) for item in ls]
 
     return mapper
 
 
-def negList(ls):
+def negList(ls: Sequence[float]) -> Sequence[float]:
     "Use :func:`map` and :func:`neg` to negate each element in `ls`"
     return map(neg)(ls)
 
 
-def zipWith(fn):
+def zipWith(fn: Callable[[float, float], float]) -> Callable[[Sequence[float], Sequence[float]], Sequence[float]]:
     """
     Higher-order zipwith (or map2).
 
@@ -166,18 +161,18 @@ def zipWith(fn):
         applying fn(x, y) on each pair of elements.
 
     """
-    def mapper(ls1, ls2):
+    def mapper(ls1: Sequence[float], ls2: Sequence[float]) -> Sequence[float]:
         return [fn(ls1[i], ls2[i]) for i in range(min(len(ls1), len(ls2)))]
 
     return mapper
 
 
-def addLists(ls1, ls2):
+def addLists(ls1: Sequence[float], ls2: Sequence[float]) -> Sequence[float]:
     "Add the elements of `ls1` and `ls2` using :func:`zipWith` and :func:`add`"
     return zipWith(add)(ls1, ls2)
 
 
-def reduce(fn, start):
+def reduce(fn: Callable[[float, float], float], start: float) -> Callable[[Sequence[float]], float]:
     r"""
     Higher-order reduce.
 
@@ -193,7 +188,7 @@ def reduce(fn, start):
         :math:`x_1 \ldots x_n` and computes the reduction :math:`fn(x_3, fn(x_2,
         fn(x_1, x_0)))`
     """
-    def mapper(ls):
+    def mapper(ls: Sequence[float]) -> float:
         res = start
 
         for item in ls:
@@ -204,11 +199,11 @@ def reduce(fn, start):
     return mapper
 
 
-def sum(ls):
+def sum(ls: Sequence[float]) -> float:
     "Sum up a list using :func:`reduce` and :func:`add`."
     return reduce(add, 0)(ls)
 
 
-def prod(ls):
+def prod(ls: Sequence[float]) -> float:
     "Product of a list using :func:`reduce` and :func:`mul`."
     return reduce(mul, 1)(ls)

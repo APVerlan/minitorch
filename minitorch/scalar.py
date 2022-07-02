@@ -1,7 +1,8 @@
-from ast import Eq, Gt
-from re import S
-from .autodiff import FunctionBase, Variable, History
+from ast import Call
+from .autodiff import FunctionBase, Variable, History, Context
 from . import operators
+from typing import Callable, Union, Optional
+
 import numpy as np
 
 
@@ -9,7 +10,7 @@ import numpy as np
 # Central Difference calculation
 
 
-def central_difference(f, *vals, arg=0, epsilon=1e-6):
+def central_difference(f: Callable[..., float], *vals: float, arg: int = 0, epsilon: float = 1e-6) -> float:
     r"""
     Computes an approximation to the derivative of `f` with respect to one arg.
 
@@ -35,6 +36,9 @@ def central_difference(f, *vals, arg=0, epsilon=1e-6):
 # ## Task 1.2 and 1.4
 # Scalar Forward and Backward
 
+class Scalar:
+    ...
+
 
 class Scalar(Variable):
     """
@@ -48,60 +52,60 @@ class Scalar(Variable):
         data (float): The wrapped scalar value.
     """
 
-    def __init__(self, v, back=History(), name=None):
+    def __init__(self, value: float, back: History = History(), name: Union[str, None] = None):
         super().__init__(back, name=name)
-        self.data = float(v)
+        self.data: float = float(value)
 
-    def __repr__(self):
-        return "Scalar(%f)" % self.data
+    def __repr__(self) -> str:
+        return f'Scalar({self.data})'
 
-    def __mul__(self, b):
+    def __mul__(self, b: Union[int, float, Scalar]) -> Scalar:
         return Mul.apply(self, b)
 
-    def __truediv__(self, b):
+    def __truediv__(self, b: Union[int, float, Scalar]) -> Scalar:
         if not isinstance(b, Variable):
             return Mul.apply(self, 1 / b)
         return Mul.apply(self, Inv.apply(b))
 
-    def __rtruediv__(self, b):
+    def __rtruediv__(self, b: Union[int, float, Scalar]) -> Scalar:
         return Mul.apply(b, Inv.apply(self))
 
-    def __add__(self, b):
+    def __add__(self, b: Union[int, float, Scalar]) -> Scalar:
         return Add.apply(self, b)
 
-    def __bool__(self):
-        return bool(self.data)
-
-    def __lt__(self, b):
-        return LT.apply(self, b)
-
-    def __gt__(self, b):
-        return LT.apply(b, self)
-
-    def __eq__(self, b):
-        return EQ.apply(self, b)
-
-    def __sub__(self, b):
+    def __sub__(self, b: Union[int, float, Scalar]) -> Scalar:
         if not isinstance(b, Variable):
             return Add.apply(self, -b)
         return Add.apply(self, Neg.apply(b))
 
-    def __neg__(self):
+    def __bool__(self) -> bool:
+        return bool(self.data)
+
+    def __lt__(self, b: Union[int, float, Scalar]) -> bool:
+        return LT.apply(self, b)
+
+    def __gt__(self, b: Union[int, float, Scalar]) -> bool:
+        return LT.apply(b, self)
+
+    def __eq__(self, b: Union[int, float, Scalar]) -> bool:
+        return EQ.apply(self, b)
+
+    def __neg__(self) -> Scalar:
         return Neg.apply(self)
 
-    def log(self):
+    def log(self) -> Scalar:
         return Log.apply(self)
 
-    def exp(self):
+    def exp(self) -> Scalar:
         return Exp.apply(self)
 
-    def sigmoid(self):
+    def sigmoid(self) -> Scalar:
         return Sigmoid.apply(self)
 
-    def relu(self):
+    def relu(self) -> Scalar:
         return ReLU.apply(self)
 
-    def get_data(self):
+    def get_data(self) -> float:
         "Returns the raw float value"
         return self.data
 
@@ -116,7 +120,7 @@ class ScalarFunction(FunctionBase):
     """
 
     @staticmethod
-    def forward(ctx, *inputs):
+    def forward(ctx: Context, *inputs: float):
         r"""
         Forward call, compute :math:`f(x_0 \ldots x_{n-1})`.
 
@@ -131,7 +135,7 @@ class ScalarFunction(FunctionBase):
         pass  # pragma: no cover
 
     @staticmethod
-    def backward(ctx, d_out):
+    def backward(ctx: Context, d_out: float):
         r"""
         Backward call, computes :math:`f'_{x_i}(x_0 \ldots x_{n-1}) \times d_{out}`.
 
@@ -154,16 +158,15 @@ class ScalarFunction(FunctionBase):
         return a
 
 
-# Examples
 class Add(ScalarFunction):
     "Addition function :math:`f(x, y) = x + y`"
 
     @staticmethod
-    def forward(ctx, a, b):
+    def forward(ctx: Context, a: float, b: float):
         return operators.add(a, b)
 
     @staticmethod
-    def backward(ctx, d_output):
+    def backward(ctx: Context, d_output: float):
         return d_output, d_output
 
 
@@ -171,29 +174,26 @@ class Log(ScalarFunction):
     "Log function :math:`f(x) = log(x)`"
 
     @staticmethod
-    def forward(ctx, a):
+    def forward(ctx: Context, a: float):
         ctx.save_for_backward(a)
         return operators.log(a)
 
     @staticmethod
-    def backward(ctx, d_output):
+    def backward(ctx: Context, d_output: float):
         a = ctx.saved_values
         return operators.log_back(a, d_output)
-
-
-# To implement.
 
 
 class Mul(ScalarFunction):
     "Multiplication function"
 
     @staticmethod
-    def forward(ctx, a, b):
+    def forward(ctx: Context, a: float, b: float):
         ctx.save_for_backward(a, b)
         return operators.mul(a, b)
 
     @staticmethod
-    def backward(ctx, d_output):
+    def backward(ctx: Context, d_output: float):
         return ctx.saved_values[1] * d_output, ctx.saved_values[0] * d_output
 
 
@@ -201,12 +201,12 @@ class Inv(ScalarFunction):
     "Inverse function"
 
     @staticmethod
-    def forward(ctx, a):
+    def forward(ctx: Context, a: float):
         ctx.save_for_backward(a)
         return operators.inv(a)
 
     @staticmethod
-    def backward(ctx, d_output):
+    def backward(ctx: Context, d_output: float):
         a = ctx.saved_values
         return operators.inv_back(a, d_output)
 
@@ -215,11 +215,11 @@ class Neg(ScalarFunction):
     "Negation function"
 
     @staticmethod
-    def forward(ctx, a):
+    def forward(ctx: Context, a: float):
         return operators.neg(a)
 
     @staticmethod
-    def backward(ctx, d_output):
+    def backward(ctx: Context, d_output: float):
         return -1. * d_output
 
 
@@ -227,12 +227,12 @@ class Sigmoid(ScalarFunction):
     "Sigmoid function"
 
     @staticmethod
-    def forward(ctx, a):
+    def forward(ctx: Context, a: float):
         ctx.save_for_backward(a)
         return operators.sigmoid(a)
 
     @staticmethod
-    def backward(ctx, d_output):
+    def backward(ctx: Context, d_output: float):
         a = ctx.saved_values
         return operators.sigmoid(a) * (1. - operators.sigmoid(a)) * d_output
 
@@ -241,12 +241,12 @@ class ReLU(ScalarFunction):
     "ReLU function"
 
     @staticmethod
-    def forward(ctx, a):
+    def forward(ctx: Context, a: float):
         ctx.save_for_backward(a)
         return operators.relu(a)
 
     @staticmethod
-    def backward(ctx, d_output):
+    def backward(ctx: Context, d_output: float):
         a = ctx.saved_values
         return operators.relu_back(a, d_output)
 
@@ -255,12 +255,12 @@ class Exp(ScalarFunction):
     "Exp function"
 
     @staticmethod
-    def forward(ctx, a):
+    def forward(ctx: Context, a: float):
         ctx.save_for_backward(a)
         return operators.exp(a)
 
     @staticmethod
-    def backward(ctx, d_output):
+    def backward(ctx: Context, d_output: float):
         a = ctx.saved_values
         return operators.exp(a) * d_output
 
@@ -269,11 +269,11 @@ class LT(ScalarFunction):
     "Less-than function :math:`f(x) =` 1.0 if x is less than y else 0.0"
 
     @staticmethod
-    def forward(ctx, a, b):
+    def forward(ctx: Context, a: float, b: float):
         return operators.lt(a, b)
 
     @staticmethod
-    def backward(ctx, d_output):
+    def backward(ctx: Context, d_output: float):
         return 0., 0.
 
 
@@ -281,15 +281,15 @@ class EQ(ScalarFunction):
     "Equal function :math:`f(x) =` 1.0 if x is equal to y else 0.0"
 
     @staticmethod
-    def forward(ctx, a, b):
+    def forward(ctx: Context, a: float, b: float):
         return operators.eq(a, b)
 
     @staticmethod
-    def backward(ctx, d_output):
+    def backward(ctx: Context, d_output: float):
         return 0., 0.
 
 
-def derivative_check(f, *scalars):
+def derivative_check(f: Callable[..., Scalar], *scalars: Scalar):
     """
     Checks that autodiff works on a python function.
     Asserts False if derivative is incorrect.
@@ -305,11 +305,12 @@ def derivative_check(f, *scalars):
 
     vals = [v for v in scalars]
     err_msg = """
-Derivative check at arguments f(%s) and received derivative f'=%f for argument %d,
-but was expecting derivative f'=%f from central difference."""
+        Derivative check at arguments f(%s) and received derivative f'=%f for argument %d,
+        but was expecting derivative f'=%f from central difference.
+    """
+
     for i, x in enumerate(scalars):
         check = central_difference(f, *vals, arg=i)
-        print(str([x.data for x in scalars]), x.derivative, i, check)
         np.testing.assert_allclose(
             x.derivative,
             check.data,
