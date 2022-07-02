@@ -22,7 +22,7 @@ class Parameter:
             if self.name:
                 self.value.name = self.name
 
-    def update(self, value: Any):
+    def update(self, value: Any) -> None:
         "Update the parameter value."
         self.value: Any = value
 
