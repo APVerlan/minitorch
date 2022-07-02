@@ -1,7 +1,6 @@
-from ast import Call
 from .autodiff import FunctionBase, Variable, History, Context
 from . import operators
-from typing import Callable, Union, Optional
+from typing import Callable, Union
 
 import numpy as np
 
