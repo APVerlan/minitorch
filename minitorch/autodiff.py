@@ -284,8 +284,7 @@ class FunctionBase:
             (see `is_constant` to remove unneeded variables)
 
         """
-        # Tip: Note when implementing this function that
-        # cls.backward may return either a value or a tuple.
+        # cls.backward may return either a value or Iterable.
         inputs = tuple(inputs) if isinstance(inputs, Iterable) else (inputs, )
 
         backward = cls.backward(ctx, d_output)

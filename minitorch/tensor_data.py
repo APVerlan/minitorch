@@ -1,20 +1,24 @@
-from ast import operator
-from math import perm
 import random
-from .operators import prod
-from numpy import array, float64, ndarray
 import numba
+import numpy as np
+
+from .operators import prod
+from typing import Any, Optional, Sequence, Union
+from numpy import array, float64, ndarray, int64
 
 MAX_DIMS = 32
 
+class TensorData:
+    ...
+
 
 class IndexingError(RuntimeError):
-    "Exception raised for indexing errors."
+    'Exception raised for indexing errors.'
     pass
 
 
-def index_to_position(index, strides):
-    """
+def index_to_position(index: np.ndarray[Any, int64], strides: np.ndarray[Any, int64]) -> int:
+    '''
     Converts a multidimensional tensor `index` into a single-dimensional position in
     storage based on strides.
 
@@ -24,13 +28,13 @@ def index_to_position(index, strides):
 
     Returns:
         int : position in storage
-    """
+    '''
 
-    return sum([idx * stride for idx, stride in zip(index, strides)])
+    return np.sum([idx * stride for idx, stride in zip(index, strides)])
 
 
-def to_index(ordinal, shape, out_index):
-    """
+def to_index(ordinal: int, shape: np.ndarray[Any, int64], out_index: np.ndarray[Any, int64]) -> None:
+    '''
     Convert an `ordinal` to an index in the `shape`.
     Should ensure that enumerating position 0 ... size of a
     tensor produces every index exactly once. It
@@ -44,10 +48,8 @@ def to_index(ordinal, shape, out_index):
     Returns:
       None : Fills in `out_index`.
 
-    """
-    shape_prod = 1
-    for s in shape[1:]:
-        shape_prod *= s
+    '''
+    shape_prod = np.prod(shape[1:])
 
     for i in range(len(shape[1:])):
         out_index[i] = (ordinal / shape_prod)
@@ -56,8 +58,13 @@ def to_index(ordinal, shape, out_index):
     out_index[len(shape) - 1] = ordinal
 
 
-def broadcast_index(big_index, big_shape, shape, out_index):
-    """
+def broadcast_index(
+                    big_index: ndarray[Any, int64], 
+                    big_shape: ndarray[Any, int64], 
+                    shape: ndarray[Any, int64], 
+                    out_index: ndarray[Any, int64]
+                    ) -> None:
+    '''
     Convert a `big_index` into `big_shape` to a smaller `out_index`
     into `shape` following broadcasting rules. In this case
     it may be larger or with more dimensions than the `shape`
@@ -72,13 +79,16 @@ def broadcast_index(big_index, big_shape, shape, out_index):
 
     Returns:
         None : Fills in `out_index`.
-    """
-    # TODO: Implement for Task 2.2.
-    raise NotImplementedError("Need to implement for Task 2.2")
+    '''
+
+    out_index = big_index[len(big_shape) - len(shape):]
+    for i in range(len(shape)):
+        if shape[i] == 1:
+            out_index[i] = 0
 
 
-def shape_broadcast(shape1, shape2):
-    """
+def shape_broadcast(shape1: Sequence[int], shape2: Sequence[int]) -> Sequence[int]:
+    '''
     Broadcast two shapes to create a new union shape.
 
     Args:
@@ -90,12 +100,33 @@ def shape_broadcast(shape1, shape2):
 
     Raises:
         IndexingError : if cannot broadcast
-    """
-    # TODO: Implement for Task 2.2.
-    raise NotImplementedError("Need to implement for Task 2.2")
+    '''
+    final_shape = []
+
+    if len(shape1) > len(shape2):
+        shape1, shape2 = shape2, shape1
+    
+    shape1 = list(reversed(shape1))
+    shape2 = list(reversed(shape2))
+    
+    for i in range(len(shape1)):
+        if shape1[i] != shape2[i]:
+            if shape1[i] == 1:
+                final_shape.append(shape2[i])
+            elif shape2[i] == 1:
+                final_shape.append(shape1[i])
+            else:
+                raise IndexingError('')
+        else:
+            final_shape.append(shape1[i])
+    
+    for i in range(len(shape1), len(shape2)):
+        final_shape.append(shape2[i])
+
+    return tuple(reversed(final_shape))
 
 
-def strides_from_shape(shape):
+def strides_from_shape(shape: Sequence[int]) -> tuple[int]:
     layout = [1]
     offset = 1
     for s in reversed(shape):
@@ -105,7 +136,7 @@ def strides_from_shape(shape):
 
 
 class TensorData:
-    def __init__(self, storage, shape, strides=None):
+    def __init__(self, storage: Sequence, shape: Sequence[int], strides: Optional[Sequence[int]] = None) -> None:
         if isinstance(storage, ndarray):
             self._storage = storage
         else:
@@ -114,29 +145,32 @@ class TensorData:
         if strides is None:
             strides = strides_from_shape(shape)
 
-        assert isinstance(strides, tuple), "Strides must be tuple"
-        assert isinstance(shape, tuple), "Shape must be tuple"
+        assert isinstance(strides, tuple), 'Strides must be tuple'
+        assert isinstance(shape, tuple), 'Shape must be tuple'
+
         if len(strides) != len(shape):
-            raise IndexingError(f"Len of strides {strides} must match {shape}.")
+            raise IndexingError(f'Len of strides {strides} must match {shape}.')
+
         self._strides = array(strides)
         self._shape = array(shape)
         self.strides = strides
         self.dims = len(strides)
         self.size = int(prod(shape))
         self.shape = shape
+
         assert len(self._storage) == self.size
 
-    def to_cuda_(self):  # pragma: no cover
+    def to_cuda_(self) -> None:  # pragma: no cover
         if not numba.cuda.is_cuda_array(self._storage):
             self._storage = numba.cuda.to_device(self._storage)
 
-    def is_contiguous(self):
-        """
+    def is_contiguous(self) -> bool:
+        '''
         Check that the layout is contiguous, i.e. outer dimensions have bigger strides than inner dimensions.
 
         Returns:
             bool : True if contiguous
-        """
+        '''
         last = 1e9
         for stride in self._strides:
             if stride > last:
@@ -148,7 +182,7 @@ class TensorData:
     def shape_broadcast(shape_a, shape_b):
         return shape_broadcast(shape_a, shape_b)
 
-    def index(self, index):
+    def index(self, index: Union[int, tuple[int]]) -> int:
         if isinstance(index, int):
             index = array([index])
         if isinstance(index, tuple):
@@ -156,12 +190,12 @@ class TensorData:
 
         # Check for errors
         if index.shape[0] != len(self.shape):
-            raise IndexingError(f"Index {index} must be size of {self.shape}.")
+            raise IndexingError(f'Index {index} must be size of {self.shape}.')
         for i, ind in enumerate(index):
             if ind >= self.shape[i]:
-                raise IndexingError(f"Index {index} out of range {self.shape}.")
+                raise IndexingError(f'Index {index} out of range {self.shape}.')
             if ind < 0:
-                raise IndexingError(f"Negative indexing for {index} not supported.")
+                raise IndexingError(f'Negative indexing for {index} not supported.')
 
         # Call fast indexing.
         return index_to_position(array(index), self._strides)
@@ -173,20 +207,20 @@ class TensorData:
             to_index(i, lshape, out_index)
             yield tuple(out_index)
 
-    def sample(self):
+    def sample(self) -> tuple[int]:
         return tuple((random.randint(0, s - 1) for s in self.shape))
 
-    def get(self, key):
+    def get(self, key: Union[Sequence[int], int]) -> float:
         return self._storage[self.index(key)]
 
-    def set(self, key, val):
+    def set(self, key: Union[Sequence[int], int], val: float) -> None:
         self._storage[self.index(key)] = val
 
     def tuple(self):
         return (self._storage, self._shape, self._strides)
 
-    def permute(self, *order):
-        """
+    def permute(self, *order: int) -> TensorData:
+        '''
         Permute the dimensions of the tensor.
 
         Args:
@@ -194,39 +228,35 @@ class TensorData:
 
         Returns:
             :class:`TensorData`: a new TensorData with the same storage and a new dimension order.
-        """
+        '''
 
         assert list(sorted(order)) == list(
             range(len(self.shape))
-        ), f"Must give a position to each dimension. Shape: {self.shape} Order: {order}"
-        new_shape, new_strides = [], []
-        for i in order:
-            new_shape.append(self.shape[i])
-            new_strides.append(self.strides[i])
+        ), f'Must give a position to each dimension. Shape: {self.shape} Order: {order}'
 
-        return TensorData(self._storage, tuple(new_shape), tuple(new_strides))
+        return TensorData(self._storage, tuple(self._shape[list(order)]), tuple(self._strides[list(order)]))
 
-    def to_string(self):
-        s = ""
+    def to_string(self) -> str:
+        s = ''
         for index in self.indices():
-            l = ""
+            l = ''
             for i in range(len(index) - 1, -1, -1):
                 if index[i] == 0:
-                    l = "\n%s[" % ("\t" * i) + l
+                    l = '\n%s[' % ('\t' * i) + l
                 else:
                     break
             s += l
-            print("index: ", index)
+            print('index: ', index)
             v = self.get(index)
-            s += f"{v:3.2f}"
-            l = ""
+            s += f'{v:3.2f}'
+            l = ''
             for i in range(len(index) - 1, -1, -1):
                 if index[i] == self.shape[i] - 1:
-                    l += "]"
+                    l += ']'
                 else:
                     break
             if l:
                 s += l
             else:
-                s += " "
+                s += ' '
         return s
