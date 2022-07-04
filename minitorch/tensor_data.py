@@ -8,6 +8,7 @@ from numpy import array, float64, ndarray, int64
 
 MAX_DIMS = 32
 
+
 class TensorData:
     ...
 
@@ -58,12 +59,10 @@ def to_index(ordinal: int, shape: np.ndarray[Any, int64], out_index: np.ndarray[
     out_index[len(shape) - 1] = ordinal
 
 
-def broadcast_index(
-                    big_index: ndarray[Any, int64], 
-                    big_shape: ndarray[Any, int64], 
-                    shape: ndarray[Any, int64], 
-                    out_index: ndarray[Any, int64]
-                    ) -> None:
+def broadcast_index(big_index: ndarray[Any, int64],
+                    big_shape: ndarray[Any, int64],
+                    shape: ndarray[Any, int64],
+                    out_index: ndarray[Any, int64]) -> None:
     '''
     Convert a `big_index` into `big_shape` to a smaller `out_index`
     into `shape` following broadcasting rules. In this case
@@ -105,10 +104,10 @@ def shape_broadcast(shape1: Sequence[int], shape2: Sequence[int]) -> Sequence[in
 
     if len(shape1) > len(shape2):
         shape1, shape2 = shape2, shape1
-    
+
     shape1 = list(reversed(shape1))
     shape2 = list(reversed(shape2))
-    
+
     for i in range(len(shape1)):
         if shape1[i] != shape2[i]:
             if shape1[i] == 1:
@@ -119,7 +118,7 @@ def shape_broadcast(shape1: Sequence[int], shape2: Sequence[int]) -> Sequence[in
                 raise IndexingError('')
         else:
             final_shape.append(shape1[i])
-    
+
     for i in range(len(shape1), len(shape2)):
         final_shape.append(shape2[i])
 
