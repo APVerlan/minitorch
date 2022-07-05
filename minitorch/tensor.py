@@ -8,6 +8,8 @@ from . import operators
 
 
 # This class is very similar to Scalar so we implemented it for you.
+class Tensor:
+    ...
 
 
 class Tensor(Variable):
@@ -21,7 +23,7 @@ class Tensor(Variable):
         backend : backend object used to implement tensor math (see `tensor_functions.py`)
     """
 
-    def __init__(self, v, back=None, name=None, backend=None):
+    def __init__(self, v: TensorData, back=None, name=None, backend=None):
         assert isinstance(v, TensorData)
         assert backend is not None
         super().__init__(back, name=name)
@@ -145,7 +147,7 @@ class Tensor(Variable):
         "Change the shape of the tensor to a new shape with the same size"
         return self.backend.View.apply(self, shape)
 
-    def contiguous(self):
+    def contiguous(self) -> Tensor:
         "Return a contiguous tensor with the same data"
         return self.backend.Copy.apply(self)
 

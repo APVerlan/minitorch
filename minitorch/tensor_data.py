@@ -31,7 +31,7 @@ def index_to_position(index: np.ndarray[Any, int64], strides: np.ndarray[Any, in
         int : position in storage
     '''
 
-    return np.sum([idx * stride for idx, stride in zip(index, strides)])
+    return int(np.sum([idx * stride for idx, stride in zip(index, strides)]))
 
 
 def to_index(ordinal: int, shape: np.ndarray[Any, int64], out_index: np.ndarray[Any, int64]) -> None:
@@ -50,13 +50,10 @@ def to_index(ordinal: int, shape: np.ndarray[Any, int64], out_index: np.ndarray[
       None : Fills in `out_index`.
 
     '''
-    shape_prod = np.prod(shape[1:])
-
-    for i in range(len(shape[1:])):
-        out_index[i] = (ordinal / shape_prod)
-        ordinal %= shape_prod
-        shape_prod /= shape[i + 1]
-    out_index[len(shape) - 1] = ordinal
+    strides = strides_from_shape(shape)
+    for i in range(len(strides)):
+        out_index[i] = int(ordinal / strides[i])
+        ordinal %= strides[i]
 
 
 def broadcast_index(big_index: ndarray[Any, int64],
@@ -79,8 +76,7 @@ def broadcast_index(big_index: ndarray[Any, int64],
     Returns:
         None : Fills in `out_index`.
     '''
-
-    out_index = big_index[len(big_shape) - len(shape):]
+    out_index[:] = big_index[len(big_shape) - len(shape):]
     for i in range(len(shape)):
         if shape[i] == 1:
             out_index[i] = 0
@@ -245,7 +241,6 @@ class TensorData:
                 else:
                     break
             s += l
-            print('index: ', index)
             v = self.get(index)
             s += f'{v:3.2f}'
             l = ''
