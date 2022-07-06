@@ -19,7 +19,7 @@ def vals(draw, size, number):
 
 @composite
 def scalars(draw, min_value=-100000, max_value=100000):
-    val = draw(floats(min_value=min_value, max_value=max_value))
+    val = draw(floats(min_value=min_value, max_value=max_value, width=16))
     return minitorch.Scalar(val)
 
 
@@ -33,7 +33,7 @@ def shapes(draw):
 
 
 @composite
-def tensor_data(draw, numbers=floats(), shape=None):
+def tensor_data(draw, numbers=floats(width=16), shape=None):
     if shape is None:
         shape = draw(shapes())
     size = int(minitorch.prod(shape))
@@ -55,7 +55,7 @@ def indices(draw, layout):
 @composite
 def tensors(
     draw,
-    numbers=floats(allow_nan=False, min_value=-100, max_value=100),
+    numbers=floats(allow_nan=False, min_value=-100, max_value=100, width=16),
     backend=None,
     shape=None,
 ):
@@ -68,7 +68,7 @@ def tensors(
 def shaped_tensors(
     draw,
     n,
-    numbers=floats(allow_nan=False, min_value=-100, max_value=100),
+    numbers=floats(allow_nan=False, min_value=-100, max_value=100, width=16),
     backend=None,
 ):
     backend = minitorch.TensorFunctions if backend is None else backend
@@ -86,7 +86,7 @@ def shaped_tensors(
 
 @composite
 def matmul_tensors(
-    draw, numbers=floats(allow_nan=False, min_value=-100, max_value=100)
+    draw, numbers=floats(allow_nan=False, min_value=-100, max_value=100, width=16)
 ):
 
     i, j, k = [draw(integers(min_value=1, max_value=10)) for _ in range(3)]

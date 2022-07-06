@@ -112,7 +112,7 @@ def inv_back(x: float, d: float) -> float:
 
 def relu_back(x: float, d: float) -> float:
     r"If :math:`f = relu` compute :math:`d \times f'(x)`"
-    return 1. * d * (x > 0)
+    return 1. * d * (x >= 0.)
 
 
 # Small library of elementary higher-order functions for practice.

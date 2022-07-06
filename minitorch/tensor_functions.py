@@ -3,6 +3,7 @@ Implementation of the autodifferentiation Functions for Tensor.
 """
 
 from typing import Any, Optional, Sequence
+
 from .autodiff import Context, FunctionBase
 from .tensor_ops import TensorOps
 import numpy as np
@@ -67,90 +68,91 @@ def make_tensor_backend(tensor_ops: Any, is_cuda: bool = False):
 
         class Neg(Function):
             @staticmethod
-            def forward(ctx: Context, t1):
+            def forward(ctx: Context, t1: Tensor) -> Tensor:
                 return neg_map(t1)
 
             @staticmethod
-            def backward(ctx: Context, grad_output):
+            def backward(ctx: Context, grad_output: Tensor) -> Tensor:
                 return neg_map(grad_output)
 
         class Inv(Function):
             @staticmethod
-            def forward(ctx: Context, t1):
+            def forward(ctx: Context, t1: Tensor) -> Tensor:
                 ctx.save_for_backward(t1)
                 return inv_map(t1)
 
             @staticmethod
-            def backward(ctx: Context, grad_output):
+            def backward(ctx: Context, grad_output: Tensor) -> Tensor:
                 t1 = ctx.saved_values
                 return inv_back_zip(t1, grad_output)
 
         class Add(Function):
             @staticmethod
-            def forward(ctx: Context, t1, t2):
+            def forward(ctx: Context, t1: Tensor, t2: Tensor) -> Tensor:
                 return add_zip(t1, t2)
 
             @staticmethod
-            def backward(ctx: Context, grad_output):
+            def backward(ctx: Context, grad_output: Tensor) -> tuple[Tensor, Tensor]:
                 return grad_output, grad_output
 
         class Mul(Function):
             @staticmethod
-            def forward(ctx: Context, a, b):
+            def forward(ctx: Context, a: Tensor, b: Tensor) -> Tensor:
                 ctx.save_for_backward(a, b)
                 return mul_zip(a, b)
 
             @staticmethod
-            def backward(ctx: Context, grad_output):
-                # TODO: Implement for Task 2.4.
-                raise NotImplementedError("Need to implement for Task 2.4")
+            def backward(ctx: Context, grad_output: Tensor) -> tuple[Tensor, Tensor]:
+                a, b = ctx.saved_tensors
+                return b * grad_output, a * grad_output
 
         class Sigmoid(Function):
             @staticmethod
-            def forward(ctx: Context, a: Tensor):
+            def forward(ctx: Context, a: Tensor) -> Tensor:
                 ctx.save_for_backward(a)
                 return sigmoid_map(a)
 
             @staticmethod
-            def backward(ctx: Context, grad_output):
-                # TODO: Implement for Task 2.4.
-                raise NotImplementedError("Need to implement for Task 2.4")
+            def backward(ctx: Context, grad_output: Tensor) -> Tensor:
+                a = ctx.saved_tensors
+                return -sigmoid_map(a) * (sigmoid_map(a) - 1.) * grad_output
 
         class ReLU(Function):
             @staticmethod
-            def forward(ctx: Context, a):
+            def forward(ctx: Context, a: Tensor) -> Tensor:
+                ctx.save_for_backward(a)
                 return relu_map(a)
 
             @staticmethod
-            def backward(ctx: Context, grad_output):
-                # TODO: Implement for Task 2.4.
-                raise NotImplementedError("Need to implement for Task 2.4")
+            def backward(ctx: Context, grad_output: Tensor) -> Tensor:
+                a = ctx.saved_tensors
+                return relu_back_zip(a, grad_output)
 
         class Log(Function):
             @staticmethod
-            def forward(ctx: Context, a):
+            def forward(ctx: Context, a: Tensor) -> Tensor:
                 ctx.save_for_backward(a)
                 return log_map(a)
 
             @staticmethod
-            def backward(ctx: Context, grad_output):
-                # TODO: Implement for Task 2.4.
-                raise NotImplementedError("Need to implement for Task 2.4")
+            def backward(ctx: Context, grad_output: Tensor) -> Tensor:
+                a = ctx.saved_tensors
+                return log_back_zip(a, grad_output)
 
         class Exp(Function):
             @staticmethod
-            def forward(ctx: Context, a):
+            def forward(ctx: Context, a: Tensor) -> Tensor:
                 ctx.save_for_backward(a)
                 return exp_map(a)
 
             @staticmethod
-            def backward(ctx: Context, grad_output):
-                # TODO: Implement for Task 2.4.
-                raise NotImplementedError("Need to implement for Task 2.4")
+            def backward(ctx: Context, grad_output: Tensor) -> Tensor:
+                a = ctx.saved_tensors
+                return exp_map(a) * grad_output
 
         class Sum(Function):
             @staticmethod
-            def forward(ctx: Context, a: Tensor, dim: Optional[int]):
+            def forward(ctx: Context, a: Tensor, dim: Optional[int]) -> Tensor:
                 ctx.save_for_backward(a.shape, dim)
                 if dim is not None:
                     return add_reduce(a, dim)
@@ -160,7 +162,7 @@ def make_tensor_backend(tensor_ops: Any, is_cuda: bool = False):
                     )
 
             @staticmethod
-            def backward(ctx: Context, grad_output):
+            def backward(ctx: Context, grad_output: Tensor) -> Tensor:
                 a_shape, dim = ctx.saved_values
                 if dim is None:
                     out = grad_output.zeros(a_shape)
@@ -171,7 +173,7 @@ def make_tensor_backend(tensor_ops: Any, is_cuda: bool = False):
 
         class All(Function):
             @staticmethod
-            def forward(ctx: Context, a: Tensor, dim: Optional[int]):
+            def forward(ctx: Context, a: Tensor, dim: Optional[int]) -> Tensor:
                 if dim is not None:
                     return mul_reduce(a, dim)
                 else:
@@ -181,13 +183,12 @@ def make_tensor_backend(tensor_ops: Any, is_cuda: bool = False):
 
         class LT(Function):
             @staticmethod
-            def forward(ctx: Context, a: Tensor, b: Tensor) -> Tensor:
+            def forward(ctx: Context, a: Tensor, b: Tensor) -> tuple[Tensor, Tensor]:
                 return lt_zip(a, b)
 
             @staticmethod
-            def backward(ctx, grad_output):
-                # TODO: Implement for Task 2.4.
-                raise NotImplementedError("Need to implement for Task 2.4")
+            def backward(ctx: Context, grad_output: Tensor) -> Tensor:
+                return grad_output * 0., grad_output * 0.
 
         class EQ(Function):
             @staticmethod
@@ -195,9 +196,8 @@ def make_tensor_backend(tensor_ops: Any, is_cuda: bool = False):
                 return eq_zip(a, b)
 
             @staticmethod
-            def backward(ctx, grad_output):
-                # TODO: Implement for Task 2.4.
-                raise NotImplementedError("Need to implement for Task 2.4")
+            def backward(ctx: Context, grad_output: Tensor) -> tuple[Tensor, Tensor]:
+                return grad_output * 0., grad_output * 0.
 
         class IsClose(Function):
             @staticmethod
@@ -207,23 +207,30 @@ def make_tensor_backend(tensor_ops: Any, is_cuda: bool = False):
         class Permute(Function):
             @staticmethod
             def forward(ctx: Context, a: Tensor, order: Sequence[int]):
-                ctx.save_for_backward(a._tensor.shape)
-                return a.permute(order)
+                ctx.save_for_backward(a.shape)
+                new_shape = tuple(a._tensor._shape[list(order)])
+                return Tensor.make(
+                    a._tensor._storage,
+                    new_shape,
+                    backend=a.backend
+                )
 
             @staticmethod
-            def backward(ctx, grad_output):
-                # TODO: Implement for Task 2.4.
-                raise NotImplementedError("Need to implement for Task 2.4")
+            def backward(ctx: Context, grad_output: Tensor) -> Tensor:
+                original = ctx.saved_tensors
+                return Tensor.make(
+                    grad_output._tensor._storage, original, backend=grad_output.backend
+                )
 
         class View(Function):
             @staticmethod
-            def forward(ctx, a, shape):
+            def forward(ctx: Context, a: Tensor, shape: Sequence[int]) -> Tensor:
                 ctx.save_for_backward(a.shape)
                 assert a._tensor.is_contiguous(), "Must be contiguous to view"
                 return Tensor.make(a._tensor._storage, shape, backend=a.backend)
 
             @staticmethod
-            def backward(ctx, grad_output):
+            def backward(ctx: Context, grad_output: Tensor) -> Tensor:
                 original = ctx.saved_values
                 return Tensor.make(
                     grad_output._tensor._storage, original, backend=grad_output.backend
@@ -231,24 +238,24 @@ def make_tensor_backend(tensor_ops: Any, is_cuda: bool = False):
 
         class Copy(Function):
             @staticmethod
-            def forward(ctx, a):
+            def forward(ctx: Context, a: Tensor) -> Tensor:
                 return id_map(a)
 
             @staticmethod
-            def backward(ctx, grad_output):
+            def backward(ctx: Context, grad_output: Tensor) -> Tensor:
                 return grad_output
 
         class MatMul(Function):
             @staticmethod
-            def forward(ctx, t1, t2):
+            def forward(ctx: Context, t1: Tensor, t2: Tensor) -> Tensor:
                 ctx.save_for_backward(t1, t2)
                 return tensor_ops.matrix_multiply(t1, t2)
 
             @staticmethod
-            def backward(ctx, grad_output):
+            def backward(ctx: Context, grad_output: Tensor) -> Tensor:
                 t1, t2 = ctx.saved_values
 
-                def transpose(a):
+                def transpose(a: Tensor) -> Tensor:
                     order = list(range(a.dims))
                     order[-2], order[-1] = order[-1], order[-2]
                     return a._new(a._tensor.permute(*order))

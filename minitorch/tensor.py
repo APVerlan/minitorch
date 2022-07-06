@@ -1,7 +1,9 @@
 """
 Implementation of the core Tensor object for autodifferentiation.
 """
+import numpy as np
 
+from typing import Union
 from .autodiff import Variable
 from .tensor_data import TensorData
 from . import operators
@@ -62,9 +64,9 @@ class Tensor(Variable):
         """
         return self._tensor.dims
 
-    def _ensure_tensor(self, b):
+    def _ensure_tensor(self, b: Union[int, float]) -> Tensor:
         "Turns a python number into a tensor with the same backend."
-        if isinstance(b, (int, float)):
+        if isinstance(b, (int, float, np.int64)):
             b = Tensor.make([b], (1,), backend=self.backend)
         else:
             b._type_(self.backend)
@@ -239,3 +241,11 @@ class Tensor(Variable):
             assert self.shape == (1,), "Must provide grad_output if non-scalar"
             grad_output = Tensor.make([1.0], (1,), backend=self.backend)
         super().backward(grad_output)
+
+    def reshape_derivative(self) -> None:
+        assert isinstance(self._derivative, Tensor)
+        if self._tensor.shape != self._derivative.shape:
+            delta = len(self._derivative.shape) - len(self._tensor.shape)
+            for i in range(len(self._derivative.shape)):
+                if i < delta or self._tensor.shape[i - delta] == 1:
+                    self._derivative = self._derivative.sum(i)

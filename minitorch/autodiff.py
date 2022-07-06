@@ -1,5 +1,5 @@
 from collections import deque
-from typing import Iterable, Optional, Union, Any
+from typing import Iterable, Optional, Sequence, Union, Any
 
 
 variable_count = 1
@@ -61,7 +61,7 @@ class Variable:
         """
         self.history = History()
 
-    def backward(self, d_output: Optional[float] = None) -> None:
+    def backward(self, d_output: Optional[Any] = None) -> None:
         """
         Calls autodiff to fill in the derivatives for the history of this object.
 
@@ -74,7 +74,7 @@ class Variable:
         backpropagate(self, d_output)
 
     @property
-    def derivative(self) -> Optional[float]:
+    def derivative(self) -> Optional[Any]:
         return self._derivative
 
     def is_leaf(self):
@@ -93,6 +93,12 @@ class Variable:
         if self._derivative is None:
             self._derivative = self.zeros()
         self._derivative += val
+
+    def reshape_derivative(self) -> None:
+        """
+        For broadcast tensor
+        """
+        pass
 
     def zero_derivative_(self) -> None:  # pragma: no cover
         """
@@ -118,7 +124,7 @@ class Variable:
     def __rmul__(self, b):
         return self * b
 
-    def zeros(self) -> float:
+    def zeros(self) -> Any:
         return 0.0
 
 
@@ -285,10 +291,10 @@ class FunctionBase:
 
         """
         # cls.backward may return either a value or Iterable.
-        inputs = tuple(inputs) if isinstance(inputs, Iterable) else (inputs, )
+        inputs = tuple(inputs) if isinstance(inputs, Sequence) else (inputs, )
 
         backward = cls.backward(ctx, d_output)
-        backward = backward if isinstance(backward, tuple) else (backward, )
+        backward = tuple(backward) if isinstance(backward, Sequence) else (backward, )
 
         constants = [is_constant(arg) for arg in inputs]
         derivatives = []
@@ -311,7 +317,7 @@ def dfs(variable: Variable, top_order: deque[Variable], visited: set[str]) -> No
     if not variable.is_leaf():                     # in leaf vertex no child ( wow!:) )
         for child_var in variable.history.inputs:
             if isinstance(child_var, Variable):      # we dont interest in constants in backprop
-                if child_var.name not in visited:
+                if child_var.name not in visited and child_var.history is not None:
                     dfs(child_var, top_order, visited)
     top_order.appendleft(variable)
 
@@ -351,17 +357,24 @@ def backpropagate(variable: Variable, deriv: Any) -> None:
 
     top_sort = topological_sort(variable)
     for var in top_sort[1:]:
-        d_outputs[var.name] = variable.zeros()
+        d_outputs[var.name] = 0.
 
     for var, d_output in variable.history.backprop_step(deriv):
         d_outputs[var.name] += d_output
+
+    leafs = []
 
     for var in top_sort[1:]:
         var_d_output = d_outputs[var.name]
         if not var.is_leaf():
             for child_var, d_output in var.history.backprop_step(var_d_output):
-                d_outputs[child_var.name] += d_output
+                if d_output is not None:
+                    d_outputs[child_var.name] += d_output
         else:
             var.accumulate_derivative(var_d_output)
+            leafs.append(var)
 
         del d_outputs[var.name]
+
+    for leaf in leafs:
+        leaf.reshape_derivative()

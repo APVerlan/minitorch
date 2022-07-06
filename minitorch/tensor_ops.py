@@ -55,8 +55,6 @@ def tensor_map(fn: Callable[[float], float]) -> Any:
 
             broadcast_index(out_index, out_shape, in_shape, in_index)
 
-            print(index_to_position(in_index, in_strides), i, in_index, out_index)
-
             out[i] = fn(in_storage[index_to_position(in_index, in_strides)])
 
     return _map
