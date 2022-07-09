@@ -46,11 +46,11 @@ def tensor_map(fn: Callable[[float], float]) -> Any:
     """
 
     def _map(out: np.ndarray[Any, np.float64],
-            out_shape: np.ndarray[Any, np.int64],
-            out_strides: np.ndarray[Any, np.int64],
-            in_storage: np.ndarray[Any, np.float64],
-            in_shape: np.ndarray[Any, np.int64],
-            in_strides: np.ndarray[Any, np.int64]):
+             out_shape: np.ndarray[Any, np.int64],
+             out_strides: np.ndarray[Any, np.int64],
+             in_storage: np.ndarray[Any, np.float64],
+             in_shape: np.ndarray[Any, np.int64],
+             in_strides: np.ndarray[Any, np.int64]):
         for index in prange(len(out)):
             out_index, in_index = np.zeros(len(out_shape)), np.zeros(len(in_shape))
             to_index(index, out_shape, out_index)
@@ -194,12 +194,12 @@ def tensor_reduce(fn: Callable[[float, float], float]) -> Any:
     """
 
     def _reduce(out: np.ndarray[Any, np.float64],
-            out_shape: np.ndarray[Any, np.int64],
-            out_strides: np.ndarray[Any, np.int64],
-            a_storage: np.ndarray[Any, np.float64],
-            a_shape: np.ndarray[Any, np.int64],
-            a_strides: np.ndarray[Any, np.int64],
-            reduce_dim: int) -> None:
+                out_shape: np.ndarray[Any, np.int64],
+                out_strides: np.ndarray[Any, np.int64],
+                a_storage: np.ndarray[Any, np.float64],
+                a_shape: np.ndarray[Any, np.int64],
+                a_strides: np.ndarray[Any, np.int64],
+                reduce_dim: int) -> None:
         for i in prange(len(out)):
             out_index = np.zeros(len(out_shape))
 
@@ -249,15 +249,15 @@ def reduce(fn: Callable[[float, float], float], start: float = 0.0) -> Any:
 
 @njit(parallel=True, fastmath=True)
 def tensor_matrix_multiply(
-    out: np.ndarray[Any, np.float64],
-    out_shape: np.ndarray[Any, np.int64],
-    out_strides: np.ndarray[Any, np.int64],
-    a_storage: np.ndarray[Any, np.float64],
-    a_shape: np.ndarray[Any, np.int64],
-    a_strides: np.ndarray[Any, np.int64],
-    b_storage: np.ndarray[Any, np.float64],
-    b_shape: np.ndarray[Any, np.int64],
-    b_strides: np.ndarray[Any, np.int64]) -> None:
+        out: np.ndarray[Any, np.float64],
+        out_shape: np.ndarray[Any, np.int64],
+        out_strides: np.ndarray[Any, np.int64],
+        a_storage: np.ndarray[Any, np.float64],
+        a_shape: np.ndarray[Any, np.int64],
+        a_strides: np.ndarray[Any, np.int64],
+        b_storage: np.ndarray[Any, np.float64],
+        b_shape: np.ndarray[Any, np.int64],
+        b_strides: np.ndarray[Any, np.int64]) -> None:
     """
     NUMBA tensor matrix multiply function.
 
@@ -291,13 +291,9 @@ def tensor_matrix_multiply(
 
     for i in prange(len(out)):
         for j in prange(a_shape[-1]):
-            a_pos = (a_batch_stride * (i // out_strides[0]) +
-                    a_strides[-2] * ((i % out_strides[0]) // out_strides[1]) +
-                    a_strides[-1] * j)
-            b_pos = (b_batch_stride * (i // out_strides[0]) +
-                    b_strides[-2] * j +
-                    b_strides[-1] * ((i % out_strides[0]) % out_strides[1]))
-            
+            a_pos = (a_batch_stride * (i // out_strides[0]) + a_strides[-2] * ((i % out_strides[0]) // out_strides[1]) + a_strides[-1] * j)
+            b_pos = (b_batch_stride * (i // out_strides[0]) + b_strides[-2] * j + b_strides[-1] * ((i % out_strides[0]) % out_strides[1]))
+
             out[i] += a_storage[a_pos] * b_storage[b_pos]
 
 

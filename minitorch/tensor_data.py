@@ -55,7 +55,7 @@ def to_index(ordinal: int, shape: np.ndarray[Any, int64], out_index: np.ndarray[
     '''
     pos = int(ordinal)
     for i, s in enumerate(np.flip(shape)):
-        out_index[-(i+1)] = pos % s
+        out_index[-(i + 1)] = pos % s
         pos = pos // s
 
 
