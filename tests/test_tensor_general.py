@@ -287,7 +287,7 @@ if numba.cuda.is_available():
 
 
 @given(data())
-@settings(max_examples=25)
+@settings(max_examples=20)
 @pytest.mark.parametrize("fn", two_arg)
 @pytest.mark.parametrize("backend", backend_tests)
 def test_two_grad_broadcast(fn, backend, data):
@@ -354,4 +354,4 @@ def test_bmm(backend, data):
         .sum(2)
         .view(D, A, C)
     )
-    assert_close_tensor(c, c2)
+    assert_close_tensor(c, c2, a, b)

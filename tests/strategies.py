@@ -105,9 +105,9 @@ def assert_close(a, b):
     assert minitorch.operators.is_close(a, b), "Failure x=%f y=%f" % (a, b)
 
 
-def assert_close_tensor(a, b):
+def assert_close_tensor(a, b, c, d):
     if a.is_close(b).all().item() != 1.0:
         assert False, (
-            "Tensors are not close \n x.shape=%s \n x=%s \n y.shape=%s \n y=%s \n Diff=%s %s"
-            % (a.shape, a, b.shape, b, a - b, a.is_close(b))
+            "Tensors are not close \n x.shape=%s \n x=%s \n y.shape=%s \n y=%s \n Diff=%s %s \n a=%s \n b=%s"
+            % (a.shape, a, b.shape, b, a - b, a.is_close(b), c, d)
         )

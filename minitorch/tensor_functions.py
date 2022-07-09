@@ -158,7 +158,7 @@ def make_tensor_backend(tensor_ops: Any, is_cuda: bool = False):
                     return add_reduce(a, dim)
                 else:
                     return add_reduce(
-                        a.contiguous().view(int(operators.prod(a.shape))), 0
+                        a.contiguous().view(int(np.prod(a.shape))), 0
                     )
 
             @staticmethod

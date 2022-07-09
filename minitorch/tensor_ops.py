@@ -1,3 +1,4 @@
+from xmlrpc.server import list_public_methods
 import numpy as np
 
 from typing import Any, Callable, Optional
@@ -229,15 +230,16 @@ def tensor_reduce(fn: Callable[[float, float], float]) -> Any:
             a_shape: np.ndarray[Any, np.int64],
             a_strides: np.ndarray[Any, np.int64],
             reduce_dim: int) -> None:
-        for i in range(len(a_storage)):
-            a_index = np.zeros(len(a_shape))
-            to_index(i, a_shape, a_index)
+        for i in range(len(out)):
+            out_index = np.zeros(len(out_shape))
 
-            out_index = a_index
-            out_index[reduce_dim] = 0
+            to_index(i, out_shape, out_index)
+            a_pos = index_to_position(out_index, a_strides)
 
-            out_pos = index_to_position(out_index, out_strides)
-            out[out_pos] = fn(out[out_pos], a_storage[i])
+            args = np.array([a_storage[a_pos + j * a_strides[reduce_dim]] for j in range(a_shape[reduce_dim])])
+
+            for arg in args:
+                out[i] = fn(out[i], arg)
 
     return _reduce
 

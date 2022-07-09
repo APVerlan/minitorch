@@ -1,3 +1,4 @@
+from re import A
 import numpy as np
 from .tensor_data import (
     to_index,
@@ -7,6 +8,8 @@ from .tensor_data import (
     MAX_DIMS,
 )
 from numba import njit, prange
+from typing import Callable, Any, Optional
+from .tensor import Tensor
 
 
 # TIP: Use `NUMBA_DISABLE_JIT=1 pytest tests/ -m task3_1` to run these tests without JIT.
@@ -19,7 +22,7 @@ index_to_position = njit(inline="always")(index_to_position)
 broadcast_index = njit(inline="always")(broadcast_index)
 
 
-def tensor_map(fn):
+def tensor_map(fn: Callable[[float], float]) -> Any:
     """
     NUMBA low_level tensor_map function. See `tensor_ops.py` for description.
 
@@ -42,14 +45,24 @@ def tensor_map(fn):
         None : Fills in `out`
     """
 
-    def _map(out, out_shape, out_strides, in_storage, in_shape, in_strides):
-        # TODO: Implement for Task 3.1.
-        raise NotImplementedError("Need to implement for Task 3.1")
+    def _map(out: np.ndarray[Any, np.float64],
+            out_shape: np.ndarray[Any, np.int64],
+            out_strides: np.ndarray[Any, np.int64],
+            in_storage: np.ndarray[Any, np.float64],
+            in_shape: np.ndarray[Any, np.int64],
+            in_strides: np.ndarray[Any, np.int64]):
+        for index in prange(len(out)):
+            out_index, in_index = np.zeros(len(out_shape)), np.zeros(len(in_shape))
+            to_index(index, out_shape, out_index)
+
+            broadcast_index(out_index, out_shape, in_shape, in_index)
+
+            out[index] = fn(in_storage[index_to_position(in_index, in_strides)])
 
     return njit(parallel=True)(_map)
 
 
-def map(fn):
+def map(fn: Callable[[float], float]) -> Any:
     """
     Higher-order tensor map function ::
 
@@ -70,7 +83,7 @@ def map(fn):
     # This line JIT compiles your tensor_map
     f = tensor_map(njit()(fn))
 
-    def ret(a, out=None):
+    def ret(a: Tensor, out: Optional[Tensor] = None) -> Tensor:
         if out is None:
             out = a.zeros(a.shape)
         f(*out.tuple(), *a.tuple())
@@ -79,7 +92,7 @@ def map(fn):
     return ret
 
 
-def tensor_zip(fn):
+def tensor_zip(fn: Callable[[float, float], float]) -> Any:
     """
     NUMBA higher-order tensor zip function. See `tensor_ops.py` for description.
 
@@ -107,23 +120,29 @@ def tensor_zip(fn):
     """
 
     def _zip(
-        out,
-        out_shape,
-        out_strides,
-        a_storage,
-        a_shape,
-        a_strides,
-        b_storage,
-        b_shape,
-        b_strides,
-    ):
-        # TODO: Implement for Task 3.1.
-        raise NotImplementedError("Need to implement for Task 3.1")
+            out: np.ndarray[Any, np.float64],
+            out_shape: np.ndarray[Any, np.int64],
+            out_strides: np.ndarray[Any, np.int64],
+            a_storage: np.ndarray[Any, np.float64],
+            a_shape: np.ndarray[Any, np.int64],
+            a_strides: np.ndarray[Any, np.int64],
+            b_storage: np.ndarray[Any, np.float64],
+            b_shape: np.ndarray[Any, np.int64],
+            b_strides: np.ndarray[Any, np.int64]) -> Any:
+        for i in prange(len(out)):
+            a_index, b_index, out_index = np.zeros(len(a_shape)), np.zeros(len(b_shape)), np.zeros(len(out_shape))
+
+            to_index(i, out_shape, out_index)
+            broadcast_index(out_index, out_shape, a_shape, a_index)
+            broadcast_index(out_index, out_shape, b_shape, b_index)
+
+            out[i] = fn(a_storage[index_to_position(a_index, a_strides)],
+                        b_storage[index_to_position(b_index, b_strides)])
 
     return njit(parallel=True)(_zip)
 
 
-def zip(fn):
+def zip(fn: Callable[[float, float], float]) -> Any:
     """
     Higher-order tensor zip function.
 
@@ -140,7 +159,7 @@ def zip(fn):
     """
     f = tensor_zip(njit()(fn))
 
-    def ret(a, b):
+    def ret(a: Tensor, b: Tensor) -> Tensor:
         c_shape = shape_broadcast(a.shape, b.shape)
         out = a.zeros(c_shape)
         f(*out.tuple(), *a.tuple(), *b.tuple())
@@ -149,7 +168,7 @@ def zip(fn):
     return ret
 
 
-def tensor_reduce(fn):
+def tensor_reduce(fn: Callable[[float, float], float]) -> Any:
     """
     NUMBA higher-order tensor reduce function. See `tensor_ops.py` for description.
 
@@ -174,14 +193,28 @@ def tensor_reduce(fn):
 
     """
 
-    def _reduce(out, out_shape, out_strides, a_storage, a_shape, a_strides, reduce_dim):
-        # TODO: Implement for Task 3.1.
-        raise NotImplementedError("Need to implement for Task 3.1")
+    def _reduce(out: np.ndarray[Any, np.float64],
+            out_shape: np.ndarray[Any, np.int64],
+            out_strides: np.ndarray[Any, np.int64],
+            a_storage: np.ndarray[Any, np.float64],
+            a_shape: np.ndarray[Any, np.int64],
+            a_strides: np.ndarray[Any, np.int64],
+            reduce_dim: int) -> None:
+        for i in prange(len(out)):
+            out_index = np.zeros(len(out_shape))
+
+            to_index(i, out_shape, out_index)
+            a_pos = index_to_position(out_index, a_strides)
+
+            args = np.array([a_storage[a_pos + j * a_strides[reduce_dim]] for j in range(a_shape[reduce_dim])])
+
+            for arg in args:
+                out[i] = fn(out[i], arg)
 
     return njit(parallel=True)(_reduce)
 
 
-def reduce(fn, start=0.0):
+def reduce(fn: Callable[[float, float], float], start: float = 0.0) -> Any:
     """
     Higher-order tensor reduce function. ::
 
@@ -200,7 +233,7 @@ def reduce(fn, start=0.0):
 
     f = tensor_reduce(njit()(fn))
 
-    def ret(a, dim):
+    def ret(a: Tensor, dim: int) -> Tensor:
         out_shape = list(a.shape)
         out_shape[dim] = 1
 
@@ -216,20 +249,19 @@ def reduce(fn, start=0.0):
 
 @njit(parallel=True, fastmath=True)
 def tensor_matrix_multiply(
-    out,
-    out_shape,
-    out_strides,
-    a_storage,
-    a_shape,
-    a_strides,
-    b_storage,
-    b_shape,
-    b_strides,
-):
+    out: np.ndarray[Any, np.float64],
+    out_shape: np.ndarray[Any, np.int64],
+    out_strides: np.ndarray[Any, np.int64],
+    a_storage: np.ndarray[Any, np.float64],
+    a_shape: np.ndarray[Any, np.int64],
+    a_strides: np.ndarray[Any, np.int64],
+    b_storage: np.ndarray[Any, np.float64],
+    b_shape: np.ndarray[Any, np.int64],
+    b_strides: np.ndarray[Any, np.int64]) -> None:
     """
     NUMBA tensor matrix multiply function.
 
-    Should work for any tensor shapes that broadcast as long as ::
+    Should work for any tensor shapes that broadcast as long as:
 
         assert a_shape[-1] == b_shape[-2]
 
@@ -257,11 +289,19 @@ def tensor_matrix_multiply(
     a_batch_stride = a_strides[0] if a_shape[0] > 1 else 0
     b_batch_stride = b_strides[0] if b_shape[0] > 1 else 0
 
-    # TODO: Implement for Task 3.2.
-    raise NotImplementedError("Need to implement for Task 3.2")
+    for i in prange(len(out)):
+        for j in prange(a_shape[-1]):
+            a_pos = (a_batch_stride * (i // out_strides[0]) +
+                    a_strides[-2] * ((i % out_strides[0]) // out_strides[1]) +
+                    a_strides[-1] * j)
+            b_pos = (b_batch_stride * (i // out_strides[0]) +
+                    b_strides[-2] * j +
+                    b_strides[-1] * ((i % out_strides[0]) % out_strides[1]))
+            
+            out[i] += a_storage[a_pos] * b_storage[b_pos]
 
 
-def matrix_multiply(a, b):
+def matrix_multiply(a: Tensor, b: Tensor) -> Tensor:
     """
     Batched tensor matrix multiply ::
 

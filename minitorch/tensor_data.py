@@ -30,8 +30,11 @@ def index_to_position(index: np.ndarray[Any, int64], strides: np.ndarray[Any, in
     Returns:
         int : position in storage
     '''
+    res = 0
+    for idx, stride in zip(index, strides):
+        res += idx * stride
 
-    return int(np.sum([idx * stride for idx, stride in zip(index, strides)]))
+    return int(res)
 
 
 def to_index(ordinal: int, shape: np.ndarray[Any, int64], out_index: np.ndarray[Any, int64]) -> None:
@@ -50,10 +53,10 @@ def to_index(ordinal: int, shape: np.ndarray[Any, int64], out_index: np.ndarray[
       None : Fills in `out_index`.
 
     '''
-    strides = strides_from_shape(shape)
-    for i in range(len(strides)):
-        out_index[i] = int(ordinal / strides[i])
-        ordinal %= strides[i]
+    pos = int(ordinal)
+    for i, s in enumerate(np.flip(shape)):
+        out_index[-(i+1)] = pos % s
+        pos = pos // s
 
 
 def broadcast_index(big_index: ndarray[Any, int64],
@@ -131,7 +134,7 @@ def strides_from_shape(shape: Sequence[int]) -> tuple[int]:
 
 
 class TensorData:
-    def __init__(self, storage: Sequence, shape: Sequence[int], strides: Optional[Sequence[int]] = None) -> None:
+    def __init__(self, storage: Sequence[float], shape: Sequence[int], strides: Optional[Sequence[int]] = None) -> None:
         if isinstance(storage, ndarray):
             self._storage = storage
         else:
