@@ -1,10 +1,8 @@
 from minitorch.autodiff import Context
 from minitorch.tensor import Tensor
 from .fast_ops import FastOps
-from .tensor_functions import Function
+from .tensor_functions import Function, rand
 from . import operators
-
-import numpy as np
 
 
 def tile(input_tensor: Tensor, kernel_shape: tuple[int, int]) -> tuple[Tensor, int, int]:
@@ -34,9 +32,6 @@ def tile(input_tensor: Tensor, kernel_shape: tuple[int, int]) -> tuple[Tensor, i
         .permute(0, 1, 2, 4, 3, 5)
     ).contiguous().view(batch, channel, new_height, new_width, kh * kw)
 
-    # print('sad', 
-    #     input_tensor.contiguous().view(batch, channel, new_height, kh, new_width, kw).permute(0, 1, 2, 4, 3, 5)
-    # )
     return result_tensor, new_height, new_width
 
 
@@ -57,17 +52,14 @@ def avgpool2d(input_tensor: Tensor, kernel: tuple[int, int]) -> Tensor:
 
     tiled, new_height, new_width = tile(input_tensor, kernel)
 
-    # print(tiled.mean(dim=len(tiled.shape) - 1))
-
-    result_tensor = tiled.mean(dim=len(tiled.shape) - 1).view(batch, channel, new_height, new_width)
-    # print(result_tensor)
+    result_tensor = tiled.mean(len(tiled.shape) - 1).view(batch, channel, new_height, new_width)
     return result_tensor
 
 
 max_reduce = FastOps.reduce(operators.max, -1e9)
 
 
-def argmax(input_tensor: Tensor, dim: int):
+def argmax(input_tensor: Tensor, dim: int) -> Tensor:
     """
     Compute the argmax as a 1-hot tensor.
 
@@ -86,24 +78,25 @@ def argmax(input_tensor: Tensor, dim: int):
 
 class Max(Function):
     @staticmethod
-    def forward(ctx: Context, input_tensor: Tensor, dim: int):
+    def forward(ctx: Context, input_tensor: Tensor, dim: int) -> Tensor:
         "Forward of max should be max reduction"
         arg = argmax(input_tensor, dim)
         ctx.save_for_backward(arg)
         
-        return 
+        return (arg * input_tensor).sum(dim) / arg.sum(dim)
 
     @staticmethod
-    def backward(ctx: Context, grad_output: Tensor):
+    def backward(ctx: Context, grad_output: Tensor) -> Tensor:
         "Backward of max should be argmax (see above)"
-        # TODO: Implement for Task 4.4.
-        raise NotImplementedError("Need to implement for Task 4.4")
+        arg = ctx.saved_values
+
+        return grad_output * arg
 
 
 max = Max.apply
 
 
-def softmax(input, dim):
+def softmax(input_tensor: Tensor, dim: int) -> Tensor:
     r"""
     Compute the softmax as a tensor.
 
@@ -118,11 +111,10 @@ def softmax(input, dim):
     Returns:
         :class:`Tensor` : softmax tensor
     """
-    # TODO: Implement for Task 4.4.
-    raise NotImplementedError("Need to implement for Task 4.4")
+    return input_tensor.exp() / input_tensor.exp().sum(dim)
 
 
-def logsoftmax(input, dim):
+def logsoftmax(input_tensor: Tensor, dim: int) -> Tensor:
     r"""
     Compute the log of the softmax as a tensor.
 
@@ -139,11 +131,10 @@ def logsoftmax(input, dim):
     Returns:
         :class:`Tensor` : log of softmax tensor
     """
-    # TODO: Implement for Task 4.4.
-    raise NotImplementedError("Need to implement for Task 4.4")
+    return input_tensor - input_tensor.exp().sum(dim).log()
 
 
-def maxpool2d(input, kernel):
+def maxpool2d(input_tensor: Tensor, kernel: tuple[int, int]) -> Tensor:
     """
     Tiled max pooling 2D
 
@@ -154,12 +145,15 @@ def maxpool2d(input, kernel):
     Returns:
         :class:`Tensor` : pooled tensor
     """
-    batch, channel, height, width = input.shape
-    # TODO: Implement for Task 4.4.
-    raise NotImplementedError("Need to implement for Task 4.4")
+    batch, channel, _, _ = input_tensor.shape
+    
+    tiled, new_height, new_width = tile(input_tensor, kernel)
+
+    result_tensor = max(tiled, len(tiled.shape) - 1).view(batch, channel, new_height, new_width)
+    return result_tensor
 
 
-def dropout(input, rate, ignore=False):
+def dropout(input_tensor: Tensor, rate: float, ignore: bool = False) -> Tensor:
     """
     Dropout positions based on random noise.
 
@@ -171,5 +165,8 @@ def dropout(input, rate, ignore=False):
     Returns:
         :class:`Tensor` : tensor with randoom positions dropped out
     """
-    # TODO: Implement for Task 4.4.
-    raise NotImplementedError("Need to implement for Task 4.4")
+    if ignore:
+        return input_tensor
+
+    ratios = rand(input_tensor.shape)
+    return input_tensor * (ratios > rate)

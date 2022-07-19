@@ -20,7 +20,6 @@ def test_conv1d_simple():
 @pytest.mark.task4_1
 @given(tensors(shape=(1, 1, 6)), tensors(shape=(1, 1, 4)))
 def test_conv1d(input, weight):
-    print(input, weight)
     minitorch.grad_check(minitorch.Conv1dFun.apply, input, weight)
 
 
