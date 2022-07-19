@@ -82,7 +82,9 @@ class Module:
         res = list(self.__dict__["_parameters"].items())
 
         for mod_name, mod in self.__dict__["_modules"].items():
-            res += [(mod_name + '.' + item[0], item[1]) for item in mod.named_parameters()]
+            res += [
+                (mod_name + "." + item[0], item[1]) for item in mod.named_parameters()
+            ]
         return res
 
     def parameters(self) -> list[Parameter]:

@@ -26,17 +26,17 @@ def add(x: float, y: float) -> float:
 
 def neg(x: float) -> float:
     ":math:`f(x) = -x`"
-    return -1. * x
+    return -1.0 * x
 
 
 def lt(x: float, y: float) -> float:
     ":math:`f(x) =` 1.0 if x is less than y else 0.0"
-    return 1. * (x < y)
+    return 1.0 * (x < y)
 
 
 def eq(x: float, y: float) -> float:
     ":math:`f(x) =` 1.0 if x is equal to y else 0.0"
-    return 1. * (x == y)
+    return 1.0 * (x == y)
 
 
 def max(x: float, y: float) -> float:
@@ -46,7 +46,7 @@ def max(x: float, y: float) -> float:
 
 def is_close(x: float, y: float) -> float:
     ":math:`f(x) = |x - y| < 1e-2`"
-    return 1. * (abs(x - y) < 1e-2)
+    return 1.0 * (abs(x - y) < 1e-2)
 
 
 def sigmoid(x: float) -> float:
@@ -67,7 +67,7 @@ def sigmoid(x: float) -> float:
     Returns:
         float : sigmoid value
     """
-    return 1. / (1. + math.exp(-x) + EPS)
+    return 1.0 / (1.0 + math.exp(-x) + EPS)
 
 
 def relu(x: float) -> float:
@@ -82,7 +82,7 @@ def relu(x: float) -> float:
     Returns:
         float : relu value
     """
-    return x if x > 0. else 0.
+    return x if x > 0.0 else 0.0
 
 
 def log(x: float) -> float:
@@ -102,17 +102,17 @@ def log_back(x: float, d: float) -> float:
 
 def inv(x: float) -> float:
     ":math:`f(x) = 1/x`"
-    return 1. / x
+    return 1.0 / x
 
 
 def inv_back(x: float, d: float) -> float:
     r"If :math:`f(x) = 1/x` compute :math:`d \times f'(x)`"
-    return - d / x ** 2
+    return -d / x**2
 
 
 def relu_back(x: float, d: float) -> float:
     r"If :math:`f = relu` compute :math:`d \times f'(x)`"
-    return 1. * d * (x >= 0.)
+    return 1.0 * d * (x >= 0.0)
 
 
 # Small library of elementary higher-order functions for practice.
@@ -134,6 +134,7 @@ def map(fn: Callable[[float], float]) -> Callable[[Sequence[float]], Sequence[fl
         function : A function that takes a list, applies `fn` to each element, and returns a
         new list
     """
+
     def mapper(ls: Sequence[float]) -> Sequence[float]:
         return [fn(item) for item in ls]
 
@@ -145,7 +146,9 @@ def negList(ls: Sequence[float]) -> Sequence[float]:
     return map(neg)(ls)
 
 
-def zipWith(fn: Callable[[float, float], float]) -> Callable[[Sequence[float], Sequence[float]], Sequence[float]]:
+def zipWith(
+    fn: Callable[[float, float], float]
+) -> Callable[[Sequence[float], Sequence[float]], Sequence[float]]:
     """
     Higher-order zipwith (or map2).
 
@@ -161,6 +164,7 @@ def zipWith(fn: Callable[[float, float], float]) -> Callable[[Sequence[float], S
         applying fn(x, y) on each pair of elements.
 
     """
+
     def mapper(ls1: Sequence[float], ls2: Sequence[float]) -> Sequence[float]:
         return [fn(ls1[i], ls2[i]) for i in range(min(len(ls1), len(ls2)))]
 
@@ -172,7 +176,9 @@ def addLists(ls1: Sequence[float], ls2: Sequence[float]) -> Sequence[float]:
     return zipWith(add)(ls1, ls2)
 
 
-def reduce(fn: Callable[[float, float], float], start: float) -> Callable[[Sequence[float]], float]:
+def reduce(
+    fn: Callable[[float, float], float], start: float
+) -> Callable[[Sequence[float]], float]:
     r"""
     Higher-order reduce.
 
@@ -188,6 +194,7 @@ def reduce(fn: Callable[[float, float], float], start: float) -> Callable[[Seque
         :math:`x_1 \ldots x_n` and computes the reduction :math:`fn(x_3, fn(x_2,
         fn(x_1, x_0)))`
     """
+
     def mapper(ls: Sequence[float]) -> float:
         res = start
 

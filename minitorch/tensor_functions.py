@@ -115,7 +115,7 @@ def make_tensor_backend(tensor_ops: Any, is_cuda: bool = False):
             @staticmethod
             def backward(ctx: Context, grad_output: Tensor) -> Tensor:
                 a = ctx.saved_tensors
-                return -sigmoid_map(a) * (sigmoid_map(a) - 1.) * grad_output
+                return -sigmoid_map(a) * (sigmoid_map(a) - 1.0) * grad_output
 
         class ReLU(Function):
             @staticmethod
@@ -157,9 +157,7 @@ def make_tensor_backend(tensor_ops: Any, is_cuda: bool = False):
                 if dim is not None:
                     return add_reduce(a, dim)
                 else:
-                    return add_reduce(
-                        a.contiguous().view(int(np.prod(a.shape))), 0
-                    )
+                    return add_reduce(a.contiguous().view(int(np.prod(a.shape))), 0)
 
             @staticmethod
             def backward(ctx: Context, grad_output: Tensor) -> Tensor:
@@ -188,7 +186,7 @@ def make_tensor_backend(tensor_ops: Any, is_cuda: bool = False):
 
             @staticmethod
             def backward(ctx: Context, grad_output: Tensor) -> Tensor:
-                return grad_output * 0., grad_output * 0.
+                return grad_output * 0.0, grad_output * 0.0
 
         class EQ(Function):
             @staticmethod
@@ -197,7 +195,7 @@ def make_tensor_backend(tensor_ops: Any, is_cuda: bool = False):
 
             @staticmethod
             def backward(ctx: Context, grad_output: Tensor) -> tuple[Tensor, Tensor]:
-                return grad_output * 0., grad_output * 0.
+                return grad_output * 0.0, grad_output * 0.0
 
         class IsClose(Function):
             @staticmethod

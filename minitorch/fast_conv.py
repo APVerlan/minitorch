@@ -84,11 +84,16 @@ def tensor_conv1d(
                 input_index = np.array([out_index[0], in_channel, 0])
                 weight_index = np.array([out_index[1], in_channel, k_width_pos])
 
-                input_index[2] = out_index[2] - k_width_pos if reverse else out_index[2] + k_width_pos
+                input_index[2] = (
+                    out_index[2] - k_width_pos
+                    if reverse
+                    else out_index[2] + k_width_pos
+                )
                 if input_index[2] >= 0 and input_index[2] < width:
-                    out[out_pos] += input[index_to_position(input_index, s1)] * weight[index_to_position(weight_index, s2)]
-
-
+                    out[out_pos] += (
+                        input[index_to_position(input_index, s1)]
+                        * weight[index_to_position(weight_index, s2)]
+                    )
 
 
 class Conv1dFun(Function):
@@ -220,18 +225,30 @@ def tensor_conv2d(
             for k_height_pos in range(kh):
                 for in_channel_pos in range(in_channels):
                     input_index = np.array([out_index[0], in_channel_pos, 0, 0])
-                    weight_index = np.array([out_index[1], in_channel_pos, k_height_pos, k_width_pos])
+                    weight_index = np.array(
+                        [out_index[1], in_channel_pos, k_height_pos, k_width_pos]
+                    )
 
                     if reverse:
-                        input_index[3] = out_index[3] - k_width_pos # ?????
-                        input_index[2] = out_index[2] - k_height_pos # ?????
-                        input_val = input[index_to_position(input_index, s1)] if input_index[2] >= 0 and input_index[3] >= 0 else 0.
+                        input_index[3] = out_index[3] - k_width_pos  # ?????
+                        input_index[2] = out_index[2] - k_height_pos  # ?????
+                        input_val = (
+                            input[index_to_position(input_index, s1)]
+                            if input_index[2] >= 0 and input_index[3] >= 0
+                            else 0.0
+                        )
                     else:
-                        input_index[3] = out_index[3] + k_width_pos # ?????
-                        input_index[2] = out_index[2] + k_height_pos # ?????
-                        input_val = input[index_to_position(input_index, s1)] if input_index[3] < width and input_index[2] < height else 0.
+                        input_index[3] = out_index[3] + k_width_pos  # ?????
+                        input_index[2] = out_index[2] + k_height_pos  # ?????
+                        input_val = (
+                            input[index_to_position(input_index, s1)]
+                            if input_index[3] < width and input_index[2] < height
+                            else 0.0
+                        )
 
-                    out[out_pos] += input_val * weight[index_to_position(weight_index, s2)]
+                    out[out_pos] += (
+                        input_val * weight[index_to_position(weight_index, s2)]
+                    )
 
 
 class Conv2dFun(Function):

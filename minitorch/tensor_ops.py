@@ -44,12 +44,13 @@ def tensor_map(fn: Callable[[float], float]) -> Any:
     """
 
     def _map(
-            out: np.ndarray[Any, np.float64],
-            out_shape: np.ndarray[Any, np.int64],
-            out_strides: np.ndarray[Any, np.int64],
-            in_storage: np.ndarray[Any, np.float64],
-            in_shape: np.ndarray[Any, np.int64],
-            in_strides: np.ndarray[Any, np.int64]) -> Any:
+        out: np.ndarray[Any, np.float64],
+        out_shape: np.ndarray[Any, np.int64],
+        out_strides: np.ndarray[Any, np.int64],
+        in_storage: np.ndarray[Any, np.float64],
+        in_shape: np.ndarray[Any, np.int64],
+        in_strides: np.ndarray[Any, np.int64],
+    ) -> Any:
         for i in range(len(out)):
             out_index, in_index = np.zeros(len(out_shape)), np.zeros(len(in_shape))
             to_index(i, out_shape, out_index)
@@ -136,24 +137,31 @@ def tensor_zip(fn: Callable[[float, float], float]) -> Any:
     """
 
     def _zip(
-            out: np.ndarray[Any, np.float64],
-            out_shape: np.ndarray[Any, np.int64],
-            out_strides: np.ndarray[Any, np.int64],
-            a_storage: np.ndarray[Any, np.float64],
-            a_shape: np.ndarray[Any, np.int64],
-            a_strides: np.ndarray[Any, np.int64],
-            b_storage: np.ndarray[Any, np.float64],
-            b_shape: np.ndarray[Any, np.int64],
-            b_strides: np.ndarray[Any, np.int64]) -> Any:
+        out: np.ndarray[Any, np.float64],
+        out_shape: np.ndarray[Any, np.int64],
+        out_strides: np.ndarray[Any, np.int64],
+        a_storage: np.ndarray[Any, np.float64],
+        a_shape: np.ndarray[Any, np.int64],
+        a_strides: np.ndarray[Any, np.int64],
+        b_storage: np.ndarray[Any, np.float64],
+        b_shape: np.ndarray[Any, np.int64],
+        b_strides: np.ndarray[Any, np.int64],
+    ) -> Any:
         for i in range(len(out)):
-            a_index, b_index, out_index = np.zeros(len(a_shape)), np.zeros(len(b_shape)), np.zeros(len(out_shape))
+            a_index, b_index, out_index = (
+                np.zeros(len(a_shape)),
+                np.zeros(len(b_shape)),
+                np.zeros(len(out_shape)),
+            )
 
             to_index(i, out_shape, out_index)
             broadcast_index(out_index, out_shape, a_shape, a_index)
             broadcast_index(out_index, out_shape, b_shape, b_index)
 
-            out[i] = fn(a_storage[index_to_position(a_index, a_strides)],
-                        b_storage[index_to_position(b_index, b_strides)])
+            out[i] = fn(
+                a_storage[index_to_position(a_index, a_strides)],
+                b_storage[index_to_position(b_index, b_strides)],
+            )
 
     return _zip
 
@@ -223,13 +231,14 @@ def tensor_reduce(fn: Callable[[float, float], float]) -> Any:
     """
 
     def _reduce(
-            out: np.ndarray[Any, np.float64],
-            out_shape: np.ndarray[Any, np.int64],
-            out_strides: np.ndarray[Any, np.int64],
-            a_storage: np.ndarray[Any, np.float64],
-            a_shape: np.ndarray[Any, np.int64],
-            a_strides: np.ndarray[Any, np.int64],
-            reduce_dim: int) -> None:
+        out: np.ndarray[Any, np.float64],
+        out_shape: np.ndarray[Any, np.int64],
+        out_strides: np.ndarray[Any, np.int64],
+        a_storage: np.ndarray[Any, np.float64],
+        a_shape: np.ndarray[Any, np.int64],
+        a_strides: np.ndarray[Any, np.int64],
+        reduce_dim: int,
+    ) -> None:
         # walk over output storage
         for out_pos in range(len(out)):
             out_idx = np.copy(out_shape)

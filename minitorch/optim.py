@@ -31,7 +31,7 @@ class MomentumSGD(Optimizer):
                 p.value._derivative = None
 
     def step(self):
-        theta = 0.
+        theta = 0.0
         for p in self.parameters:
             if p.value.derivative is not None:
                 theta = theta * self.alpha - self.lr * p.value.derivative

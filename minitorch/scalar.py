@@ -9,7 +9,9 @@ import numpy as np
 # Central Difference calculation
 
 
-def central_difference(f: Callable[..., float], *vals: float, arg: int = 0, epsilon: float = 1e-6) -> float:
+def central_difference(
+    f: Callable[..., float], *vals: float, arg: int = 0, epsilon: float = 1e-6
+) -> float:
     r"""
     Computes an approximation to the derivative of `f` with respect to one arg.
 
@@ -29,11 +31,12 @@ def central_difference(f: Callable[..., float], *vals: float, arg: int = 0, epsi
     lvals[arg] = lvals[arg] + epsilon
     rvals[arg] = rvals[arg] - epsilon
 
-    return (f(*lvals) - f(*rvals)) / (2. * epsilon)
+    return (f(*lvals) - f(*rvals)) / (2.0 * epsilon)
 
 
 # ## Task 1.2 and 1.4
 # Scalar Forward and Backward
+
 
 class Scalar:
     ...
@@ -51,12 +54,14 @@ class Scalar(Variable):
         data (float): The wrapped scalar value.
     """
 
-    def __init__(self, value: float, back: History = History(), name: Union[str, None] = None):
+    def __init__(
+        self, value: float, back: History = History(), name: Union[str, None] = None
+    ):
         super().__init__(back, name=name)
         self.data: float = float(value)
 
     def __repr__(self) -> str:
-        return f'Scalar({self.data})'
+        return f"Scalar({self.data})"
 
     def __mul__(self, b: Union[int, float, Scalar]) -> Scalar:
         return Mul.apply(self, b)
@@ -219,7 +224,7 @@ class Neg(ScalarFunction):
 
     @staticmethod
     def backward(ctx: Context, d_output: float):
-        return -1. * d_output
+        return -1.0 * d_output
 
 
 class Sigmoid(ScalarFunction):
@@ -233,7 +238,7 @@ class Sigmoid(ScalarFunction):
     @staticmethod
     def backward(ctx: Context, d_output: float):
         a = ctx.saved_values
-        return operators.sigmoid(a) * (1. - operators.sigmoid(a)) * d_output
+        return operators.sigmoid(a) * (1.0 - operators.sigmoid(a)) * d_output
 
 
 class ReLU(ScalarFunction):
@@ -273,7 +278,7 @@ class LT(ScalarFunction):
 
     @staticmethod
     def backward(ctx: Context, d_output: float):
-        return 0., 0.
+        return 0.0, 0.0
 
 
 class EQ(ScalarFunction):
@@ -285,7 +290,7 @@ class EQ(ScalarFunction):
 
     @staticmethod
     def backward(ctx: Context, d_output: float):
-        return 0., 0.
+        return 0.0, 0.0
 
 
 def derivative_check(f: Callable[..., Scalar], *scalars: Scalar):

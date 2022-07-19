@@ -5,7 +5,9 @@ from .tensor_functions import Function, rand
 from . import operators
 
 
-def tile(input_tensor: Tensor, kernel_shape: tuple[int, int]) -> tuple[Tensor, int, int]:
+def tile(
+    input_tensor: Tensor, kernel_shape: tuple[int, int]
+) -> tuple[Tensor, int, int]:
     """
     Reshape an image tensor for 2D pooling
 
@@ -25,16 +27,18 @@ def tile(input_tensor: Tensor, kernel_shape: tuple[int, int]) -> tuple[Tensor, i
 
     new_height = height // kh
     new_width = width // kw
-    
+
     result_tensor = (
-        input_tensor.contiguous()
-        .view(batch, channel, new_height, kh, new_width, kw)
-        .permute(0, 1, 2, 4, 3, 5)
-    ).contiguous().view(batch, channel, new_height, new_width, kh * kw)
+        (
+            input_tensor.contiguous()
+            .view(batch, channel, new_height, kh, new_width, kw)
+            .permute(0, 1, 2, 4, 3, 5)
+        )
+        .contiguous()
+        .view(batch, channel, new_height, new_width, kh * kw)
+    )
 
     return result_tensor, new_height, new_width
-
-
 
 
 def avgpool2d(input_tensor: Tensor, kernel: tuple[int, int]) -> Tensor:
@@ -52,7 +56,9 @@ def avgpool2d(input_tensor: Tensor, kernel: tuple[int, int]) -> Tensor:
 
     tiled, new_height, new_width = tile(input_tensor, kernel)
 
-    result_tensor = tiled.mean(len(tiled.shape) - 1).view(batch, channel, new_height, new_width)
+    result_tensor = tiled.mean(len(tiled.shape) - 1).view(
+        batch, channel, new_height, new_width
+    )
     return result_tensor
 
 
@@ -82,7 +88,7 @@ class Max(Function):
         "Forward of max should be max reduction"
         arg = argmax(input_tensor, dim)
         ctx.save_for_backward(arg)
-        
+
         return (arg * input_tensor).sum(dim) / arg.sum(dim)
 
     @staticmethod
@@ -146,10 +152,12 @@ def maxpool2d(input_tensor: Tensor, kernel: tuple[int, int]) -> Tensor:
         :class:`Tensor` : pooled tensor
     """
     batch, channel, _, _ = input_tensor.shape
-    
+
     tiled, new_height, new_width = tile(input_tensor, kernel)
 
-    result_tensor = max(tiled, len(tiled.shape) - 1).view(batch, channel, new_height, new_width)
+    result_tensor = max(tiled, len(tiled.shape) - 1).view(
+        batch, channel, new_height, new_width
+    )
     return result_tensor
 
 

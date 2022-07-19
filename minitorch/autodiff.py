@@ -10,6 +10,7 @@ variable_count = 1
 # Variable is the main class for autodifferentiation logic for scalars
 # and tensors.
 
+
 class Variable:
     ...
 
@@ -196,7 +197,12 @@ class History:
 
     """
 
-    def __init__(self, last_fn: Optional[FunctionBase] = None, ctx: Optional[Context] = None, inputs: Optional[Iterable[Any]] = None):
+    def __init__(
+        self,
+        last_fn: Optional[FunctionBase] = None,
+        ctx: Optional[Context] = None,
+        inputs: Optional[Iterable[Any]] = None,
+    ):
         self.last_fn = last_fn
         self.ctx = ctx
         self.inputs = inputs
@@ -276,7 +282,9 @@ class FunctionBase:
         return cls.variable(cls.data(c), None)
 
     @classmethod
-    def chain_rule(cls, ctx: Context, inputs: Iterable[Any], d_output: Any) -> Iterable[tuple[Variable, Any]]:
+    def chain_rule(
+        cls, ctx: Context, inputs: Iterable[Any], d_output: Any
+    ) -> Iterable[tuple[Variable, Any]]:
         """
         Implement the derivative chain-rule.
 
@@ -308,9 +316,11 @@ def is_constant(val: Any) -> bool:
 def dfs(variable: Variable, top_order: deque[Variable], visited: set[str]) -> None:
     visited.add(variable.unique_id)
 
-    if not variable.is_leaf():                                                      # in leaf vertex no child ( wow!:) )
+    if not variable.is_leaf():  # in leaf vertex no child ( wow!:) )
         for child_var in variable.history.inputs:
-            if not is_constant(child_var) and child_var.unique_id not in visited:   # we dont interest in constants in backprop
+            if (
+                not is_constant(child_var) and child_var.unique_id not in visited
+            ):  # we dont interest in constants in backprop
                 dfs(child_var, top_order, visited)
 
     top_order.appendleft(variable)
@@ -354,11 +364,14 @@ def backpropagate(variable: Variable, deriv: Any) -> None:
     while len(top_order) != 0:
         var = top_order.popleft()
         var_d_output = d_outputs.get(var.unique_id)
-    
+
         if not var.is_leaf():
             for child_var, d_output in var.history.backprop_step(var_d_output):
-                d_outputs[child_var.unique_id] = d_outputs.get(child_var.unique_id, 0.) + d_output
+                d_outputs[child_var.unique_id] = (
+                    d_outputs.get(child_var.unique_id, 0.0) + d_output
+                )
         else:
             var.accumulate_derivative(var_d_output)
+
 
 # bad chain rule, topological sort and backward !!!!!!!!!!!
