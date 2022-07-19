@@ -62,7 +62,8 @@ def tensor_conv1d(
         weight_strides (array): strides for `input` tensor.
         reverse (bool): anchor weight at left or right
     """
-    batch_, out_channels, out_width = out_shape
+
+    batch_, out_channels, _ = out_shape
     batch, in_channels, width = input_shape
     out_channels_, in_channels_, kw = weight_shape
 
@@ -74,8 +75,20 @@ def tensor_conv1d(
     s1 = input_strides
     s2 = weight_strides
 
-    # TODO: Implement for Task 4.1.
-    raise NotImplementedError("Need to implement for Task 4.1")
+    for out_pos in prange(out_size):
+        out_index = np.zeros(len(out_shape))
+        to_index(out_pos, out_shape, out_index)
+
+        for k_width_pos in range(kw):
+            for in_channel in range(in_channels):
+                input_index = np.array([out_index[0], in_channel, 0])
+                weight_index = np.array([out_index[1], in_channel, k_width_pos])
+
+                input_index[2] = out_index[2] - k_width_pos if reverse else out_index[2] + k_width_pos
+                if input_index[2] >= 0 and input_index[2] < width:
+                    out[out_pos] += input[index_to_position(input_index, s1)] * weight[index_to_position(weight_index, s2)]
+
+
 
 
 class Conv1dFun(Function):
@@ -195,11 +208,30 @@ def tensor_conv2d(
     s1 = input_strides
     s2 = weight_strides
     # inners
-    s10, s11, s12, s13 = s1[0], s1[1], s1[2], s1[3]
-    s20, s21, s22, s23 = s2[0], s2[1], s2[2], s2[3]
+    # s10, s11, s12, s13 = s1[0], s1[1], s1[2], s1[3]
+    # s20, s21, s22, s23 = s2[0], s2[1], s2[2], s2[3]
 
-    # TODO: Implement for Task 4.2.
-    raise NotImplementedError("Need to implement for Task 4.2")
+    for out_pos in prange(len(out)):
+        out_index = np.zeros(len(out_shape))
+
+        to_index(out_pos, out_shape, out_index)
+
+        for k_width_pos in range(kw):
+            for k_height_pos in range(kh):
+                for in_channel_pos in range(in_channels):
+                    input_index = np.array([out_index[0], in_channel_pos, 0, 0])
+                    weight_index = np.array([out_index[1], in_channel_pos, k_height_pos, k_width_pos])
+
+                    if reverse:
+                        input_index[3] = out_index[3] - k_width_pos # ?????
+                        input_index[2] = out_index[2] - k_height_pos # ?????
+                        input_val = input[index_to_position(input_index, s1)] if input_index[2] >= 0 and input_index[3] >= 0 else 0.
+                    else:
+                        input_index[3] = out_index[3] + k_width_pos # ?????
+                        input_index[2] = out_index[2] + k_height_pos # ?????
+                        input_val = input[index_to_position(input_index, s1)] if input_index[3] < width and input_index[2] < height else 0.
+
+                    out[out_pos] += input_val * weight[index_to_position(weight_index, s2)]
 
 
 class Conv2dFun(Function):

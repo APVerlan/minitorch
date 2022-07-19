@@ -31,12 +31,12 @@ def neg(x: float) -> float:
 
 def lt(x: float, y: float) -> float:
     ":math:`f(x) =` 1.0 if x is less than y else 0.0"
-    return float(x < y)
+    return 1. * (x < y)
 
 
 def eq(x: float, y: float) -> float:
     ":math:`f(x) =` 1.0 if x is equal to y else 0.0"
-    return float(x == y)
+    return 1. * (x == y)
 
 
 def max(x: float, y: float) -> float:
@@ -46,7 +46,7 @@ def max(x: float, y: float) -> float:
 
 def is_close(x: float, y: float) -> float:
     ":math:`f(x) = |x - y| < 1e-2`"
-    return float(abs(x - y) < 1e-2)
+    return 1. * (abs(x - y) < 1e-2)
 
 
 def sigmoid(x: float) -> float:

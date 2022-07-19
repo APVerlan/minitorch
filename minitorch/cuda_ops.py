@@ -1,5 +1,8 @@
-from numba import cuda
 import numba
+import numpy as np
+
+from numba import cuda
+from typing import Any
 from .tensor_data import (
     to_index,
     index_to_position,
@@ -41,9 +44,24 @@ def tensor_map(fn):
         None : Fills in `out`
     """
 
-    def _map(out, out_shape, out_strides, out_size, in_storage, in_shape, in_strides):
-        # TODO: Implement for Task 3.3.
-        raise NotImplementedError("Need to implement for Task 3.3")
+    def _map(out: np.ndarray[Any, np.float64],
+             out_shape: np.ndarray[Any, np.int64],
+             out_strides: np.ndarray[Any, np.int64],
+             out_size: int,
+             in_storage: np.ndarray[Any, np.float64],
+             in_shape: np.ndarray[Any, np.int64],
+             in_strides: np.ndarray[Any, np.int64]) -> None:
+        out_pos = cuda.blockIdx.x * cuda.blockDim.x + cuda.threadIdx.x
+        if out_pos >= out_size:
+            return
+
+        out_index, in_index = cuda.local.array(len(out_shape)), cuda.local.array(len(in_shape))
+        
+        to_index(out_pos, out_shape, out_index)
+        broadcast_index(out_index, out_shape, in_shape, in_index)
+        
+        out[out_pos] = fn(in_storage[index_to_position(in_index, in_strides)])
+
 
     return cuda.jit()(_map)
 
@@ -90,19 +108,30 @@ def tensor_zip(fn):
     """
 
     def _zip(
-        out,
-        out_shape,
-        out_strides,
-        out_size,
-        a_storage,
-        a_shape,
-        a_strides,
-        b_storage,
-        b_shape,
-        b_strides,
-    ):
-        # TODO: Implement for Task 3.3.
-        raise NotImplementedError("Need to implement for Task 3.3")
+        out: np.ndarray[Any, np.float64],
+        out_shape: np.ndarray[Any, np.int64],
+        out_strides: np.ndarray[Any, np.int64],
+        out_size: int,
+        a_storage: np.ndarray[Any, np.float64],
+        a_shape: np.ndarray[Any, np.int64],
+        a_strides: np.ndarray[Any, np.int64],
+        b_storage: np.ndarray[Any, np.float64],
+        b_shape: np.ndarray[Any, np.int64],
+        b_strides: np.ndarray[Any, np.int64],
+    ) -> None:
+        out_pos = cuda.blockIdx.x * cuda.blockDim.x + cuda.threadIdx.x
+        if out_pos >= out_size:
+            return
+
+        a_index, b_index, out_index = cuda.local.array(len(a_shape)), cuda.local.array(len(b_shape)), cuda.local.array(len(out_shape))
+
+        to_index(out_pos, out_shape, out_index)
+        
+        broadcast_index(out_index, out_shape, a_shape, a_index)
+        broadcast_index(out_index, out_shape, b_shape, b_index)
+        
+        out[out_pos] = fn(a_storage[index_to_position(a_index, a_strides)],
+                    b_storage[index_to_position(b_index, b_strides)])
 
     return cuda.jit()(_zip)
 
@@ -145,8 +174,17 @@ def _sum_practice(out, a, size):
 
     """
     BLOCK_DIM = 32
-    # TODO: Implement for Task 3.3.
-    raise NotImplementedError("Need to implement for Task 3.3")
+    # # TODO: Implement for Task 3.3.
+    # raise NotImplementedError("Need to implement for Task 3.3")
+    out_pos = cuda.blockIdx.x * cuda.blockDim.x + cuda.threadIdx.x
+    if out_pos >= size // BLOCK_DIM:
+        return
+    
+    for i in range(out_pos * BLOCK_DIM, (out_pos + 1) * BLOCK_DIM):
+        if i >= size:
+            break
+
+        out[out_pos] += a[i]
 
 
 jit_sum_practice = cuda.jit()(_sum_practice)

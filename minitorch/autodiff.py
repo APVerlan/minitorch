@@ -290,18 +290,12 @@ class FunctionBase:
             (see `is_constant` to remove unneeded variables)
 
         """
-        # cls.backward may return either a value or Iterable.
-        inputs = tuple(inputs) if isinstance(inputs, Sequence) else (inputs, )
-
-        backward = cls.backward(ctx, d_output)
-        backward = tuple(backward) if isinstance(backward, Sequence) else (backward, )
-
-        constants = [is_constant(arg) for arg in inputs]
-        derivatives = []
-        for i, is_const in enumerate(constants):
-            if not is_const:
-                derivatives.append((inputs[i], backward[i]))
-        return derivatives
+        return [
+            # expand() - for broadcasting deriv backward and input in forward pass
+            (inputs[i], inputs[i].expand(back))
+            for (i, back) in enumerate(wrap_tuple(cls.backward(ctx, d_output)))
+            if not is_constant(inputs[i])
+        ]
 
 
 # Algorithms for backpropagation
@@ -312,17 +306,17 @@ def is_constant(val: Any) -> bool:
 
 
 def dfs(variable: Variable, top_order: deque[Variable], visited: set[str]) -> None:
-    visited.add(variable.name)
+    visited.add(variable.unique_id)
 
-    if not variable.is_leaf():                     # in leaf vertex no child ( wow!:) )
+    if not variable.is_leaf():                                                      # in leaf vertex no child ( wow!:) )
         for child_var in variable.history.inputs:
-            if isinstance(child_var, Variable):      # we dont interest in constants in backprop
-                if child_var.name not in visited and child_var.history is not None:
-                    dfs(child_var, top_order, visited)
+            if not is_constant(child_var) and child_var.unique_id not in visited:   # we dont interest in constants in backprop
+                dfs(child_var, top_order, visited)
+
     top_order.appendleft(variable)
 
 
-def topological_sort(variable: Variable) -> Iterable[Variable]:
+def topological_sort(variable: Variable) -> deque[Variable]:
     """
     Computes the topological order of the computation graph.
 
@@ -335,8 +329,10 @@ def topological_sort(variable: Variable) -> Iterable[Variable]:
     """
     top_order: deque[Variable] = deque()
     visited: set[str] = set()
+
     dfs(variable, top_order, visited)
-    return list(top_order)
+
+    return top_order
 
 
 def backpropagate(variable: Variable, deriv: Any) -> None:
@@ -352,29 +348,17 @@ def backpropagate(variable: Variable, deriv: Any) -> None:
 
     No return. Should write to its results to the derivative values of each leaf through `accumulate_derivative`.
     """
-    variable._derivative = deriv
-    d_outputs = dict()
+    d_outputs = {variable.unique_id: deriv}
+    top_order = topological_sort(variable)
 
-    top_sort = topological_sort(variable)
-    for var in top_sort[1:]:
-        d_outputs[var.name] = 0.
-
-    for var, d_output in variable.history.backprop_step(deriv):
-        d_outputs[var.name] += d_output
-
-    leafs = []
-
-    for var in top_sort[1:]:
-        var_d_output = d_outputs[var.name]
+    while len(top_order) != 0:
+        var = top_order.popleft()
+        var_d_output = d_outputs.get(var.unique_id)
+    
         if not var.is_leaf():
             for child_var, d_output in var.history.backprop_step(var_d_output):
-                if d_output is not None:
-                    d_outputs[child_var.name] += d_output
+                d_outputs[child_var.unique_id] = d_outputs.get(child_var.unique_id, 0.) + d_output
         else:
             var.accumulate_derivative(var_d_output)
-            leafs.append(var)
 
-        del d_outputs[var.name]
-
-    for leaf in leafs:
-        leaf.reshape_derivative()
+# bad chain rule, topological sort and backward !!!!!!!!!!!

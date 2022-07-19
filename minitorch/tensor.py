@@ -241,11 +241,3 @@ class Tensor(Variable):
             assert self.shape == (1,), "Must provide grad_output if non-scalar"
             grad_output = Tensor.make([1.0], (1,), backend=self.backend)
         super().backward(grad_output)
-
-    def reshape_derivative(self) -> None:
-        assert isinstance(self._derivative, Tensor)
-        if self._tensor.shape != self._derivative.shape:
-            delta = len(self._derivative.shape) - len(self._tensor.shape)
-            for i in range(len(self._derivative.shape)):
-                if i < delta or self._tensor.shape[i - delta] == 1:
-                    self._derivative = self._derivative.sum(i)

@@ -205,15 +205,11 @@ def make_tensor_backend(tensor_ops: Any, is_cuda: bool = False):
                 return is_close_zip(a, b)
 
         class Permute(Function):
+            # bad permute operation !!!!!
             @staticmethod
             def forward(ctx: Context, a: Tensor, order: Sequence[int]):
                 ctx.save_for_backward(a.shape)
-                new_shape = tuple(a._tensor._shape[list(order)])
-                return Tensor.make(
-                    a._tensor._storage,
-                    new_shape,
-                    backend=a.backend
-                )
+                return Tensor(a._tensor.permute(*order), backend=a.backend)
 
             @staticmethod
             def backward(ctx: Context, grad_output: Tensor) -> Tensor:
